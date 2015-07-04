@@ -1,0 +1,12 @@
+TODO
+====
+
+ * x Fetch a post
+ * Out: Output html for a post
+ * Loop to fetch all posts
+ * Parse different post types
+ * Fetch posts for a given month (=> continue fetching until past the given month; warn of month not over yet)
+ * Split posts by month
+ * Out: Add post's tags
+ * Config: cmd-line params api key, period
+
