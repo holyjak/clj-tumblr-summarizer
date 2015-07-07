@@ -5,17 +5,18 @@
 (def sample (json/read-str
              (slurp "sample-post.json")))
 
-(defn item []
+(defn link-item [{:strs [url title description]}]
   (h/html
    [:article
     [:h5
-     [:a {:href "http://example.com/aLink"} "A link"]]
-    [:p "its description"]]))
+     [:a {:href url} title]]
+    [:p description]]))
 
 (comment
 
-  (get-in ["response" "posts" 0] sample)
-  (def post0 (get-in sample ["response" "posts" 0]))
-  (select-keys post0 ["url" "timestamp" "title" "type" "description"])
+  (-> sample
+     (get-in ["response" "posts" 0])
+     (select-keys ["url" "timestamp" "title" "type" "description"])
+     (link-item))
 
   )
