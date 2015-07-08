@@ -6,5 +6,6 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [http-kit "2.1.16"]
                  [hiccup "1.0.5"]
-                 [org.clojure/data.json "0.2.6"]]
+                 [org.clojure/data.json "0.2.6"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]]
   :main clj-tumblr-summarizer.core)
