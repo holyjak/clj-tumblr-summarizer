@@ -2,7 +2,7 @@
   (require [hiccup.core :as h]
            [clojure.data.json :as json]))
 
-(def sample (json/read-str
+#_(def sample (json/read-str
              (slurp "sample-post.json")))
 
 (defn link-item [{:strs [url title description]}]

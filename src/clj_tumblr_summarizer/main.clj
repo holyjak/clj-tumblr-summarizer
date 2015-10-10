@@ -15,16 +15,19 @@
       (binding [*out* *err*]
         (println "UNCAUGHT ERROR ON A THREAD:" (.getMessage throwable))))))
 
-
 (defn print-receiver [chan]
   (a/thread
     (loop []
       (if-let [post (<!! chan)]
         (do
-          (json/pprint post)
+          (pp/pprint
+            (select-keys post [:description :tags :excerpt :type :post_url :title]))
+          ;(json/pprint post)
           ;(out/output-post post)
           (recur))
         (log "print-receiver: DONE, no more input")))))
+
+;; TODO Create an output stream, pass it to (out/output-post post) then close
 
 (defn -main [& args]
   (let [post-chan (chan tumblr-max-limit)]

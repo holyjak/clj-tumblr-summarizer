@@ -6,8 +6,8 @@
 
 (defn send-posts [chan body]
   (let [posts (-> body
-                  (json/read-str)
-                  (get-in ["response" "posts"]))]
+                  (json/read-str :key-fn keyword)
+                  (get-in [:response :posts]))]
     (a/onto-chan chan posts true)))
 
 ;; synchronous
