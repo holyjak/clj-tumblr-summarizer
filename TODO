@@ -1,6 +1,18 @@
 TODO
 ====
 
+## FIXME
+
+```
+
+UNCAUGHT ERROR ON A THREAD: clojure.lang.ExceptionInfo:
+Illegal character in query at index 130:
+http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset=0&limit=1&api_key=saejvQguqslbewkYIQEzwoPGjIEykALlJM6f7qwZxfSrZibwtP
+ {:ctx "Fetching posts failed from http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset=0&limit=1&api_key=saejvQguqslbewkYIQEzwoPGjIEykALlJM6f7qwZxfSrZibwtP\n"}, compiling:(/private/var/folders/kg/r_8ytg7x521cvlmz_47t2rgc0000gn/T/form-init1664811366284516670.clj:1:125)
+```
+
+## TODO
+
  * x Fetch a post
  * Out: Output html for a post
  * Loop to fetch all posts
