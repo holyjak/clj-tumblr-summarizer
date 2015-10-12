@@ -12,7 +12,7 @@
 
 ;; synchronous
 (defn fetch-posts [{:keys [chan api-key]}]
-  (let [posts-url (str "http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset=0&limit=1&api_key=" api-key)
+  (let [posts-url (str "http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset=0&limit=20&api_key=" api-key)
         {:keys [status headers body error] :as resp} @(http/get posts-url)]
     (if error
       (throw (ex-info (.getMessage error) {:ctx (str "Fetching posts failed from " posts-url)}))

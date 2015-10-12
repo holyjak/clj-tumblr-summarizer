@@ -1,9 +1,12 @@
 (ns clj-tumblr-summarizer.output
   (require [hiccup.core :as h]
-           [clojure.data.json :as json]))
+           [clojure.data.json :as json]
+           [clojure.edn :as edn]))
 
 #_(def sample (json/read-str
-             (slurp "sample-post.json")))
+                (slurp "sample-post.json")))
+(def sample (edn/read-string
+                (slurp "sample-post.edn")))
 
 (defn link-item [{:strs [url title description]}]
   (h/html
