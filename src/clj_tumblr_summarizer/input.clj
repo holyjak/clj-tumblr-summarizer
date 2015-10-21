@@ -4,17 +4,38 @@
     [clojure.data.json :as json]
     [org.httpkit.client :as http]))
 
-(defn send-posts [chan body]
+(defn posts->chan [chan body]
   (let [posts (-> body
                   (json/read-str :key-fn keyword)
                   (get-in [:response :posts]))]
-    (a/onto-chan chan posts true)))
+    (a/onto-chan chan posts true)
+    (not-empty posts)))
 
 ;; synchronous
-(defn fetch-posts [{:keys [chan api-key]}]
-  (let [posts-url (str "http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset=0&limit=20&api_key=" api-key)
+(defn fetch-posts-batch [{:keys [chan api-key offset]}]
+  (println ">>> fetch-posts-batch" offset)
+  (let [posts-url (str
+                    "http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset="
+                    offset
+                    "&limit=20&api_key="
+                    api-key)
         {:keys [status headers body error] :as resp} @(http/get posts-url)]
-    (if error
-      (throw (ex-info (.getMessage error) {:ctx (str "Fetching posts failed from " posts-url)}))
-      (send-posts chan body)
-      )))
+    (if-not error
+      (posts->chan chan body)
+      (throw
+        (ex-info
+          (.getMessage error)
+          {:ctx (str "Fetching posts failed from " posts-url)})))))
+
+(defn fetch-posts [{:keys [chan api-key] :as config}]
+  (loop [offset 0]
+    ;; TODO Stop if we crossed into another month
+    ;; (or let the receiver close the channel when it is so?)
+    (when
+      (fetch-posts-batch
+        (assoc config :offset offset))
+      (recur (+ 20 offset)))))
+
+(comment
+  (fetch-posts {:chan (chan), :api-key (slurp ".api-key")})
+  )

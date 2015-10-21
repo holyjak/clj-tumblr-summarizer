@@ -42,11 +42,11 @@
      [:blockquote text]
      [:p source]]))
 
-(defn item [data]
-  (condp = (:type data)
-    "link" (link-item data)
-    "text" (text-item data)
-    "quote" (quote-item data)))
+(defn item [post]
+  (condp = (:type post)
+    "link" (link-item post)
+    "text" (text-item post)
+    "quote" (quote-item post)))
 
 (comment
 

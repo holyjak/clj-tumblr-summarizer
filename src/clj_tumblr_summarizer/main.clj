@@ -20,6 +20,8 @@
     (loop []
       (if-let [post (<!! chan)]
         (do
+          ;; TODO Open a new file / close the old as necessary
+          ; TODO: 1. (out/item post) 2. print out 3. eventually close
           (pp/pprint
             (select-keys post [:post_url                    ;; all
                                :tags                        ;; all
@@ -37,7 +39,9 @@
           ;(json/pprint post)
           ;(out/output-post post)
           (recur))
-        (log "print-receiver: DONE, no more input")))))
+        (do
+          ;; TODO Close the output file
+          (log "print-receiver: DONE, no more input"))))))
 
 ;; TODO Create an output stream, pass it to (out/output-post post) then close
 

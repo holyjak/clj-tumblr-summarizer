@@ -14,11 +14,11 @@ http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset=0&limit=1&api_key=
 ## TODO
 
  * x Fetch a post
- * Out: Output html for a post
- * Loop to fetch all posts
- * Parse different post types
+ * x Out: Output html for a post
+ * x Loop to fetch all posts
+ * x Parse different post types
  * Fetch posts for a given month (=> continue fetching until past the given month; warn of month not over yet)
- * Split posts by month
+ * Split posts by month (1 file / month?)
  * Out: Add post's tags
  * Config: cmd-line params api key, period
 
