@@ -21,7 +21,19 @@
       (if-let [post (<!! chan)]
         (do
           (pp/pprint
-            (select-keys post [:description :tags :excerpt :type :post_url :title]))
+            (select-keys post [:post_url                    ;; all
+                               :tags                        ;; all
+                               :timestamp                   ;; all?
+                               :title                       ;; all
+                               :type                        ;; all "link" "text" "quote" "video" ...
+                               :description                 ;; link
+                               :excerpt                     ;; link; "sub-title"
+                               ;; link: + :author :publisher :photos
+                               :body                        ;; on a text
+                               :text                        ;; quote
+                               :source                      ;; quote
+                               ;; TODO What are notes?
+                               ]))
           ;(json/pprint post)
           ;(out/output-post post)
           (recur))
