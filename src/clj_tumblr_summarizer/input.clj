@@ -8,8 +8,9 @@
   (let [posts (-> body
                   (json/read-str :key-fn keyword)
                   (get-in [:response :posts]))]
-    (a/onto-chan chan posts true)
-    (not-empty posts)))
+    (if-not (empty? posts)
+      (a/onto-chan chan posts true)
+      (close! chan))))
 
 ;; synchronous
 (defn fetch-posts-batch [{:keys [chan api-key offset]}]
