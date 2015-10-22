@@ -46,6 +46,9 @@
 
 (defn -main [& args]
   (let [post-chan (chan tumblr-max-limit)]
+    ;; Reset files
+    (spit "out.html" "")
+    (spit "out.edn" "")
     (in/fetch-posts {:chan post-chan, :api-key api-key})
     ;; Start the reader, wait for it to finish before shutting down
     (<!! (print-receiver post-chan))))
