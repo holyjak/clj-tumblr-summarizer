@@ -1,0 +1,6 @@
+{:aliases {:x {:exec-fn clj-tumblr-summarizer.main/-main}}
+ :deps {org.clojure/clojure {:mvn/version "1.10.1"}
+        http-kit/http-kit {:mvn/version "2.5.0"}
+        hiccup/hiccup {:mvn/version "1.0.5"}
+        org.clojure/data.json {:mvn/version "1.0.0"}
+        org.clojure/core.async {:mvn/version "1.3.610"}}}
