@@ -1,8 +1,9 @@
 (ns clj-tumblr-summarizer.output
-  (require [hiccup.core :as h]
-           [clojure.data.json :as json]
-           [clojure.edn :as edn]
-           [clojure.string :as str]))
+  (:require
+    [hiccup.core :as h]
+    [clojure.data.json :as json]
+    [clojure.edn :as edn]
+    [clojure.string :as str]))
 
 #_(def sample (json/read-str
                 (slurp "sample-post.json")))
@@ -50,6 +51,6 @@
 
 (comment
 
-  (spit "out.html" (str/join "" (map item sample)))
+  (spit "out.html" (str/join "" (map item sample))))
 
-  )
+

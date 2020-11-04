@@ -14,7 +14,9 @@
     (uncaughtException [_ thread throwable]
       (binding [*out* *err*]
         (println "UNCAUGHT ERROR ON A THREAD:" (.getMessage throwable))))))
+
 (def cnt (atom 0))
+
 (defn print-receiver [chan]
   (a/thread
     (loop []
@@ -36,9 +38,9 @@
                                 ;; link: + :author :publisher :photos
                                 :body                       ;; on a text
                                 :text                       ;; quote
-                                :source                     ;; quote
+                                :source]))                     ;; quote
                                 ;; TODO What are notes?
-                                ]))
+
             :append true)
           (recur))
         (log "print-receiver: DONE, no more input" @cnt)))))
@@ -59,4 +61,5 @@
 
       ;; Wait for the reader to finish before shutting down
       (<!! done-ch))))
+
 

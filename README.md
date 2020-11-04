@@ -14,6 +14,6 @@ A command-line tool for creating monthly summaries of a Tumblr blog.
 
 ## License
 
-Copyright © 201 Jakub Holý
+Copyright © 2020 Jakub Holý
 
 Distributed under the Eclipse Public License either version 1.0. 
