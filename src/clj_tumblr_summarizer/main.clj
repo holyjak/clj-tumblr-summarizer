@@ -3,6 +3,7 @@
             [clojure.data.json :as json]
             [clojure.core.async :as a :refer [chan >!! <!! close!]]
             [clj-tumblr-summarizer.core :refer [log]]
+            [clj-tumblr-summarizer.async-utils :as au]
             [clj-tumblr-summarizer.output :as out]
             [clj-tumblr-summarizer.input :as in]))
 
@@ -48,18 +49,24 @@
 ;; TODO Create an output stream, pass it to (out/output-post post) then close
 
 (defn -main [& args]
-  (let [post-chan (chan tumblr-max-limit)]
-    ;; Reset files
-    (spit "out.html" "")
-    (spit "out.edn" "")
-    (let [done-ch (print-receiver post-chan)]
-      (log ">> Starting the receiver")
-      (print-receiver post-chan)
+  #_(let [post-chan (chan tumblr-max-limit)]
+      ;; Reset files
+      (spit "out.html" "")
+      (spit "out.edn" "")
+      (let [done-ch (print-receiver post-chan)]
+        (log ">> Starting the receiver")
+        (print-receiver post-chan)
 
-      (log ">> Starting to fetch")
-      (in/fetch-posts! {:chan post-chan, :api-key api-key})
+        (log ">> Starting to fetch")
+        (in/fetch-posts! {:chan post-chan, :api-key api-key})
 
-      ;; Wait for the reader to finish before shutting down
-      (<!! done-ch))))
+        ;; Wait for the reader to finish before shutting down
+        (<!! done-ch))))
 
+(comment
+  (let [c (chan)]
+    (in/async-fetch-all-posts c)
+    (au/spit-chan c :id))
 
+  (in/async-fetch-all-posts (au/tap-ch))
+  nil)

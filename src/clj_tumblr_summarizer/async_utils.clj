@@ -17,18 +17,46 @@
                    (a/close! dst))))))
 
 (defn spit-chan
-  "Write N-th value into ./out[00N].edn."
-  ([ch] (spit-chan ch 0))
-  ([ch idx]
+  "Write N-th value into ./out(id-fn value).edn."
+  ([ch id-fn]
    (when-let [v (<!! ch)]
      (binding [*print-length* nil, *print-level* nil]
        ;; FIXME Handle errors
-       (spit (format "out%03d.edn" idx)
+       (spit (format "data/out%s.edn" (id-fn v))
              (pr-str v)))
-     (recur ch))))
+     (recur ch id-fn))))
+
+(defn tap-ch []
+  (let [ch (a/chan)]
+    (a/go-loop []
+      (if-let [val (a/<! ch)]
+        (do (tap> [:print-ch val])
+            (recur))
+        (tap> [:print-ch :CLOSED])))
+    ch))
+
+#_(defn async-iteration
+    [from-process
+     to-process
+     output-channel
+     & {:keys [values-selector some? init]
+        :or {values-selector vector
+             some? some?}}]
+    (a/>! to-process init)
+    (loop [value (a/<! from-process)]
+      (if (some? value)
+        (do
+          (doseq [item (values-selector value)]
+            (a/>! output-channel item))
+          (a/>! to-process value))
+        (a/close! output-channel))))
 
 (comment
   (def src (a/to-chan! [1 3 5 2 4 6]))
+
+  (spit-chan (a/to-chan! [{:some "map" :is "here"}]))
+
+
 
   (defn print-ch []
     (let [ch (a/chan)]

@@ -4,6 +4,8 @@
     [clojure.data.json :as json]
     [org.httpkit.client :as http]))
 
+(def api-key (slurp ".api-key"))
+
 ;; TODO
 ;; Keep on fetching a single page and putting it onto a channel
 ;; until exhausted or the destination channel is closed by the consumer
@@ -16,17 +18,20 @@
     (if-not (empty? posts)
       (a/onto-chan! chan posts false))))
 
-(defn fetch-posts-batch*
-  "Fetch 20 posts starting at the given offset, return the body (string) or throw"
-  [api-key offset]
-  {:pre [api-key offset]}
-  (let [posts-url (str
-                    "http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?offset="
-                    offset
-                    ; before=int - Returns posts published earlier than a specified Unix timestamp, in seconds.
-                    "&limit=20&npf=true&api_key="
-                    api-key)
+(defn fetch-posts-raw
+  "Fetch 20 posts starting at the given offset, return the body (string) or throw
+  Params:
+   - `href` is path + query params, such as /v2/blog/holyjak.tumblr.com/posts?npf=true"
+  [href]
+  {:pre [href]}
+  (let [posts-url (str ; before=int - Returns posts published earlier than a specified Unix timestamp, in seconds.
+                    "http://api.tumblr.com" href "&api_key=" api-key)
         {:keys [status headers body error] :as resp} @(http/get posts-url)]
+    (println "DBG fetching" href)
+    ;; NOTE: We get OK with empty posts when no more posts
+
+    ;; FIXME Add retry w/ exponential backoff, esp. when we hit the rate limit
+
     (if-not error
       body
       (throw
@@ -34,43 +39,39 @@
           (.getMessage error)
           {:ctx (str "Fetching posts failed from " posts-url)})))))
 
-;; synchronous
-(defn fetch-posts-batch
-  "Fetch the newest posts with the given offset, return a channel with the body."
-  [{:keys [api-key offset] :or {offset 0}}]
-  (println ">>> fetch-posts-batch" offset)
+(defn parse-body [body]
+  (let [{:keys [_links posts total_posts]}
+        (:response (json/read-str body :key-fn keyword))]
+    {:posts posts
+     :total-posts total_posts
+     :next-href (-> _links :next :href)}))
+
+(defn async-fetch-all-posts
+  "Fetches all the posts, starting from the newest, until exhausted or the
+  `dst` channel is closed.
+
+  Returns a channel that will contain either `:success` or an `Exception`."
+  [dst]
   (a/thread
-    (fetch-posts-batch* api-key offset)))
+    (try
+      (loop [href "/v2/blog/holyjak.tumblr.com/posts?npf=true"]
+        (let [{:keys [posts next-href]} (parse-body (fetch-posts-raw href))
+              [post & more-posts] posts
+              dst-open? (when post (a/>!! dst post))]
+          (when (empty? posts)
+            (a/close! dst))
+          (<!!                                              ; back-pressure
+            (a/onto-chan! dst more-posts false))
+          (if (and dst-open? next-href)
+            (recur next-href)
+            :success)))
+      (catch Exception e
+        (println "ERROR fetch-posts:" e)
+        e)
+      (finally
+        (a/close! dst)))))
 
-;(defn fetch-posts!
-;  "Fetch all the posts as per arguments. Blocking!"
-;  [{:keys [chan api-key] :as config}]
-;  (loop [offset 0]
-;    ;; TODO Stop if we crossed into another month
-;    ;; (or let the receiver close the channel when it is so?)
-;    (when
-;      (fetch-posts-batch
-;        (assoc config :offset offset))
-;      (recur (+ 20 offset)))))
 
-
-(defn body->posts [body]
-  (-> body
-      (json/read-str :key-fn keyword)
-      (get-in [:response :posts])))
-
-(defn fetch-posts
-  "Fetches the posts, putting each onto the `dst` channel and closing it when done."
-  [api-key dst]
-  (let [src      (chan)
-        xform    (comp
-                   (map body->posts)
-                   cat)
-        posts-ch (chan 1 xform)]
-    (-> (fetch-posts-batch {:api-key api-key, :chan src})
-        (a/pipe posts-ch))
-    (a/pipe posts-ch dst)
-    #_(a/pipe posts-ch (print-ch))))
 
 ;; RESPONSE FORMAT FOR A POST
 ;; :tags ["clojure" "library" "clojurescript"]
@@ -86,16 +87,9 @@
 
 (comment
 
-  (pipeline api-key (print-ch))
+  (pipeline (print-ch))
 
-  (defn print-ch []
-    (let [ch (a/chan)]
-      (a/go-loop []
-        (if-let [val (a/<! ch)]
-          (do (println "VAL: " val)
-              (recur))
-          (println "CLOSED dst")))
-      ch))
+
 
   (def ch (chan))
 
@@ -105,9 +99,9 @@
       (println "RECEIVED" v)
       (recur (<!! ch))))
 
-  (-> (fetch-posts-batch (slurp ".api-key") 0)
-      (json/read-str :key-fn keyword)
-      (get-in [:response :posts]))
+  (def posts
+    (-> (<!! (fetch-posts-batch 0))
+        (body->posts)))
 
   (tap> posts)
   (tap> (first posts))
