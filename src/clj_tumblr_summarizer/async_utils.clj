@@ -1,20 +1,52 @@
 (ns clj-tumblr-summarizer.async-utils
   (:require
-    [clojure.core.async :as a :refer [<! <!! >!]]))
+    [clojure.core.async :as a :refer [<! >! <!! >! go go-loop close! chan]]
+    [clojure.test :refer [is]]))
 
-(defn chan-while
-  "Like `take-while` applied to a channel, closing
+#_(defn chan-while
+    "Like `take-while` applied to a channel, closing
   both the src and dst channels when the pred-icate
   returns false."
-  [src dst pred]
-  (let [filtered (a/chan 1 (take-while pred))]
-    (a/pipe src filtered)
-    (a/go-loop []
-             (if-let [val (<! filtered)]
-               (and (>! dst val)
-                    (recur))
-               (do (a/close! src)
-                   (a/close! dst))))))
+    [src dst pred]
+    (let [filtered (a/chan 1 (take-while pred))]
+      (a/pipe src filtered)
+      (a/go-loop []
+               (if-let [val (<! filtered)]
+                 (and (>! dst val)
+                      (recur))
+                 (do (a/close! src)
+                     (a/close! dst))))))
+
+(defn async-iterate
+  "Similar to `clojure.core/iterate` but working with a producer process rather then a function.
+  Returns a channel with the produced values that closes when the producer closes.
+
+  A producer reads the previously produced value (starting with `init`) from `to-producer`
+  and writes a new value to `from-producer`."
+  [from-producer
+   to-producer
+   init]
+  (go (>! to-producer init))
+  (let [produced-vals (chan)]
+    (go-loop [v (<! from-producer)]
+      (if (and v (>! produced-vals v))
+        (do
+          (a/put! to-producer v)
+          (recur (<! from-producer)))
+        (do (run! close! [to-producer produced-vals])
+            (println "DBG async-iterate done, closing all"))))
+    produced-vals))
+
+(comment
+  (let [pin (chan), pout (chan)
+        proc (-> (a/pipe pin (chan 1 (comp (map inc) (take 3))))
+                 (a/pipe pout))]
+    (assert (is (= [1 2 3]
+                   (<!! (a/into [] (async-iterate pout pin 0))))))
+    (let [[v c] (a/alts!! [pin (a/to-chan! [:closed]) :priority])]
+      (assert (is (= v nil)))
+      (assert (is (= pin c)))))
+  nil)
 
 (defn spit-chan
   "Write N-th value into ./out(id-fn value).edn."

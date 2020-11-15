@@ -2,6 +2,7 @@
   (:require
     [clojure.core.async :as a :refer [chan >!! <!! close!]]
     [clojure.data.json :as json]
+    [clj-tumblr-summarizer.async-utils :as au]
     [org.httpkit.client :as http]))
 
 (def api-key (slurp ".api-key"))
@@ -18,7 +19,7 @@
     (if-not (empty? posts)
       (a/onto-chan! chan posts false))))
 
-(defn fetch-posts-raw
+(defn fetch-post-batch-raw
   "Fetch 20 posts starting at the given offset, return the body (string) or throw
   Params:
    - `href` is path + query params, such as /v2/blog/holyjak.tumblr.com/posts?npf=true"
@@ -46,32 +47,43 @@
      :total-posts total_posts
      :next-href (-> _links :next :href)}))
 
-(defn async-fetch-all-posts
-  "Fetches all the posts, starting from the newest, until exhausted or the
-  `dst` channel is closed.
+(defn start-post-batch-producer
+  "A producer for use with `async-iterate`, returning batches of posts
+  in the form defined by [[parse-body]].
 
-  Returns a channel that will contain either `:success` or an `Exception`."
-  [dst]
-  (a/thread
-    (try
-      (loop [href "/v2/blog/holyjak.tumblr.com/posts?npf=true"]
-        (let [{:keys [posts next-href]} (parse-body (fetch-posts-raw href))
-              [post & more-posts] posts
-              dst-open? (when post (a/>!! dst post))]
-          (when (empty? posts)
-            (a/close! dst))
-          (<!!                                              ; back-pressure
-            (a/onto-chan! dst more-posts false))
-          (if (and dst-open? next-href)
-            (recur next-href)
-            :success)))
-      (catch Exception e
-        (println "ERROR fetch-posts:" e)
-        e)
-      (finally
-        (a/close! dst)))))
+  Returns the `out` channel"
+  [in out]
+  (a/go-loop []
+    (if-let [href (:next-href (a/<! in))]
+      (do (a/>! out (try
+                      (parse-body (fetch-post-batch-raw href))
+                      (catch Exception e
+                        {:error e})))
+          (recur))
+      (do (a/close! out)
+          (println "DBG [start-]post-batch-producer: done"))))
+  out)
 
-
+(defn fetch-posts-async!
+  "Keep fetching posts and putting them onto `dst` until
+  there are no more or the `stop-signal` channel is closed.
+  Returns the `dst` channel immediately."
+  [dst stop-signal]
+  ;; NOTE Fetches one page too many when stop-signal sent due to the
+  ;; (unavoidable?) 1 buffer of the `unrolled-posts-ch` :-(
+  (let [producer-in  (chan)
+        producer-out (chan)
+        unrolled-posts-ch (chan 1 (comp
+                                    (map :posts)
+                                    cat))]
+    (a/go
+      (a/<! stop-signal)
+      (println "DBG fetch-posts-async! received stop signal, closing producer-in")
+      (a/close! producer-in))
+    (-> (start-post-batch-producer producer-in producer-out)
+        (au/async-iterate producer-in {:next-href "/v2/blog/holyjak.tumblr.com/posts?npf=true"})
+        (a/pipe unrolled-posts-ch)
+        (a/pipe dst))))
 
 ;; RESPONSE FORMAT FOR A POST
 ;; :tags ["clojure" "library" "clojurescript"]
@@ -87,28 +99,13 @@
 
 (comment
 
-  (pipeline (print-ch))
-
-
-
-  (def ch (chan))
-
-  (let [ch (chan)]
-    (fetch-posts! {:chan (chan), :api-key api-key})
-    (loop [v :START]
-      (println "RECEIVED" v)
-      (recur (<!! ch))))
-
-  (def posts
-    (-> (<!! (fetch-posts-batch 0))
-        (body->posts)))
-
-  (tap> posts)
-  (tap> (first posts))
-
-  (posts->chan ch body)
-  (def res (<!! (a/into [] ch)))
-  (count res) ; => 20
-
+  (let [dst (chan 1 (take 25))
+        stop (chan)]
+    (println "TST Fetching...")
+    (println "TST Retrieved"
+             (count (a/<!! (a/into [] (fetch-posts-async! dst stop))))
+             "posts")
+    (println "TST Closing dst...")
+    (a/close! stop))
 
   nil)
