@@ -2,8 +2,11 @@
   (:require
     [clojure.core.async :as a :refer [chan >!! <!! close!]]
     [clojure.data.json :as json]
+    [clojure.java.io :as io]
+    [clojure.string :as str]
     [clj-tumblr-summarizer.async-utils :as au]
-    [org.httpkit.client :as http]))
+    [org.httpkit.client :as http])
+  (:import (java.io PushbackReader)))
 
 (def api-key (slurp ".api-key"))
 
@@ -76,7 +79,7 @@
         unrolled-posts-ch (chan 1 (comp
                                     (map :posts)
                                     cat))]
-    (a/go
+    (a/go ;; FIXME Make this stop also when the producer stops itself?
       (a/<! stop-signal)
       (println "DBG fetch-posts-async! received stop signal, closing producer-in")
       (a/close! producer-in))
@@ -97,6 +100,20 @@
 ; :timestamp 1604507864 -> * 1000 (Date.)
 ; :id 633872438054256640
 
+(defn data-files->posts-chan []
+  (let [tx-ch (chan 1 (comp
+                        (filter #(clojure.string/ends-with? (.getName %) ".edn"))
+                        (map clojure.java.io/reader)
+                        (map #(PushbackReader. %))
+                        (map clojure.edn/read)
+                        #_(map (juxt :date :slug))))]
+
+    (a/thread
+      (run!
+        #(a/>!! tx-ch %)
+        (file-seq (clojure.java.io/file "data"))))
+    tx-ch))
+
 (comment
 
   (let [dst (chan 1 (take 25))
@@ -107,5 +124,10 @@
              "posts")
     (println "TST Closing dst...")
     (a/close! stop))
+
+  (def *fch (data-files->posts-chan))
+  (:date (a/poll! *fch))
+  (a/close! *fch)
+
 
   nil)
