@@ -1,1 +1,5 @@
+.api-key
+.cpcache/
+data/
 lib-nonredistributable/
+nongit/

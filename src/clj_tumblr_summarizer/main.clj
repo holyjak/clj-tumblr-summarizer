@@ -1,14 +1,12 @@
 (ns clj-tumblr-summarizer.main
+  "The entry point for running the tool, fetching, storing, and
+  processing new Tumblr posts."
   (:require [clojure.pprint :as pp]
             [clojure.data.json :as json]
             [clojure.core.async :as a :refer [chan >!! <!! close!]]
-            [clj-tumblr-summarizer.core :refer [log]]
             [clj-tumblr-summarizer.async-utils :as au]
             [clj-tumblr-summarizer.output :as out]
             [clj-tumblr-summarizer.input :as in]))
-
-(def api-key (slurp ".api-key"))
-(def tumblr-max-limit 20)                                   ;; TODO mv to input
 
 (Thread/setDefaultUncaughtExceptionHandler
   (reify Thread$UncaughtExceptionHandler
@@ -16,57 +14,22 @@
       (binding [*out* *err*]
         (println "UNCAUGHT ERROR ON A THREAD:" (.getMessage throwable))))))
 
-(def cnt (atom 0))
-
-(defn print-receiver [chan]
-  (a/thread
-    (loop []
-      (if-let [post (<!! chan)]
-        (do
-          (log "--> post" (swap! cnt inc))
-          ;; Re-opening+closing is inefficient but who cares?
-          (spit "out.html" (str (out/item post) "\n") :append true)
-          (spit "out.edn"
-                (prn-str
-                  (select-keys post
-                               [:post_url                   ;; all
-                                :tags                       ;; all
-                                :timestamp                  ;; all?
-                                :title                      ;; all
-                                :type                       ;; all "link" "text" "quote" "video" ...
-                                :description                ;; link
-                                :excerpt                    ;; link; "sub-title"
-                                ;; link: + :author :publisher :photos
-                                :body                       ;; on a text
-                                :text                       ;; quote
-                                :source]))                     ;; quote
-                                ;; TODO What are notes?
-
-            :append true)
-          (recur))
-        (log "print-receiver: DONE, no more input" @cnt)))))
-
-;; TODO Create an output stream, pass it to (out/output-post post) then close
+(defn store-new-posts
+  "Fetch all posts from the given Tumblr blog and dump them into files."
+  [blog-name]
+  (let [previous-ts      (<!! (in/max-post-timestamp-ch (in/data-files->posts-chan)))
+        posts-ch (chan 1 (take-while #(> (:timestamp %)
+                                         previous-ts)))
+        stop (chan)]
+    (in/fetch-posts-async! blog-name posts-ch stop)
+    (au/spit-chan posts-ch (fn [{:keys [id timestamp]}]
+                             (str timestamp "-" id)))
+    (a/close! stop)))
 
 (defn -main [& args]
-  #_(let [post-chan (chan tumblr-max-limit)]
-      ;; Reset files
-      (spit "out.html" "")
-      (spit "out.edn" "")
-      (let [done-ch (print-receiver post-chan)]
-        (log ">> Starting the receiver")
-        (print-receiver post-chan)
-
-        (log ">> Starting to fetch")
-        (in/fetch-posts! {:chan post-chan, :api-key api-key})
-
-        ;; Wait for the reader to finish before shutting down
-        (<!! done-ch))))
+  (let [blog-name (or (first args) "holyjak")]
+    (store-new-posts blog-name)))
 
 (comment
-  (let [c (chan)]
-    (in/async-fetch-all-posts c)
-    (au/spit-chan c :id))
-
-  (in/async-fetch-all-posts (au/tap-ch))
+  (store-new-posts "holyjak")
   nil)

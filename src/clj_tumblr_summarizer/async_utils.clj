@@ -1,4 +1,5 @@
 (ns clj-tumblr-summarizer.async-utils
+  "Utils for core async."
   (:require
     [clojure.core.async :as a :refer [<! >! <!! >! go go-loop close! chan]]
     [clojure.test :refer [is]]))
@@ -49,16 +50,19 @@
   nil)
 
 (defn spit-chan
-  "Write N-th value into ./out(id-fn value).edn."
+  "Write N-th value into ./out(id-fn value).edn. Blocking."
   ([ch id-fn]
    (when-let [v (<!! ch)]
+     (println "spit-chan -> " (format "data/out%s.edn" (id-fn v)))
      (binding [*print-length* nil, *print-level* nil]
        ;; FIXME Handle errors
        (spit (format "data/out%s.edn" (id-fn v))
              (pr-str v)))
      (recur ch id-fn))))
 
-(defn tap-ch []
+(defn tap-ch
+  "(Troubleshooting) Make a channel that puts every value inserted into it onto `tap>` and also reports when closed."
+  []
   (let [ch (a/chan)]
     (a/go-loop []
       (if-let [val (a/<! ch)]
