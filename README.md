@@ -12,7 +12,7 @@ Alpha, work in progress.
 * [ ] [WIP] Put the posts into a Datalog datastore
 * [ ] Create monthly summaries of the newly published posts
 * [ ] Make it into an AWS Lambda, run monthly
-* [ ] Error handling, robustness
+* [ ] Error handling, robustness - see [Error handling in Clojure Core.Async (and its higher-level constructs)](https://blog.jakubholy.net/2019/core-async-error-handling/)
 
 ## Usage
 
