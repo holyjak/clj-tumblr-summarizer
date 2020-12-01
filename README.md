@@ -1,6 +1,6 @@
 # clj-tumblr-summarizer
 
-A command-line tool / AWS Lambda for backing up posts from a Tumblr blog and creating monthly summaries of the published posts.
+A command-line tool / AWS Lambda for backing up posts from a Tumblr blog and creating monthly summaries of the published posts, to publish on a blog.
 
 Created to scratch my itch and to learn more about technilogies such as `core.async` and Datomic.
 
