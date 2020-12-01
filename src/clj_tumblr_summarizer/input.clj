@@ -62,7 +62,8 @@
       (do (a/>! out (try
                       (parse-body (fetch-post-batch-raw href))
                       (catch Exception e
-                        {:error e})))
+                        (a/close! out)
+                        (throw e))))
           (recur))
       (do (a/close! out)
           (println "DBG [start-]post-batch-producer: done"))))

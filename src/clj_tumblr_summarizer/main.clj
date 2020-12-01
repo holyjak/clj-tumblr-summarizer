@@ -31,5 +31,5 @@
     (store-new-posts blog-name)))
 
 (comment
-  (store-new-posts "holyjak")
+  (store-new-posts "holyjakXXX")
   nil)
