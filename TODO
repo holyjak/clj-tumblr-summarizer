@@ -1,6 +1,17 @@
 TODO
 ====
 
+## Now
+
+1. Look into using GH Actions for the build and GH Pages for the search site
+2. Build Lunr search index - http://cryogenweb.org/docs/add-basic-search.html
+3. Make a static search site with Lunr on GH Pages or S3
+4. Add `latest.edn` so it is easier to see where to start downloading from w/o getting all the past files from storage
+5. Datahike to enable the monthly summaries logic
+
+
+----
+
 ## Future
 
 1. ~Given a timestamp, keep downloading until you hit it (using the async `chan-while`)~
