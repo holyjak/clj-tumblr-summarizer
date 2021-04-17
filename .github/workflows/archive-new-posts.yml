@@ -16,13 +16,24 @@ jobs:
     - uses: DeLaGuardo/setup-clojure@3.2
       with:
           cli: 1.10.1.693
+    - name: Configure AWS Credentials
+    # See https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions#permissions-for-assuming-a-role
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-west-1
     # FIXME: Get info about the latest backed up post
     - name: Make api-key available to the app
-      run: echo "$TUMBLR_API_KEY" > .api-key
+      run: |
+        echo -n "$TUMBLR_API_KEY" > .api-key
+        mkdir data
       env:
         TUMBLR_API_KEY: ${{ secrets.TUMBLR_API_KEY }}
     - name: Archive new posts # NOTE: Requires the secrets in the env
       run: clojure -M -m clj-tumblr-summarizer.main holyjak
-    # FIXME Upload to somewhere
-    - name: TMP - list results
-      run: ls data/*
+      # FIXME !!! Fails with 'URISyntaxException: Illegal character in query at index 122: http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?npf=true&api_key=***'
+    - name: Upload to S3
+      run: aws s3 sync ./data "s3://$BUCKET"
+      env:
+        BUCKET: ${{ secrets.BUCKET }}
