@@ -1,0 +1,28 @@
+name: Archive latest Tumblr posts
+on:
+  #schedule:
+  #  - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v2
+      with:
+          distribution: 'zulu'
+          java-version: 11
+    - uses: DeLaGuardo/setup-clojure@3.2
+      with:
+          cli: 1.10.1.693
+    # FIXME: Get info about the latest backed up post
+    - name: Make api-key available to the app
+      run: echo "$TUMBLR_API_KEY" > .api-key
+      env:
+        TUMBLR_API_KEY: ${{ secrets.TUMBLR_API_KEY }}
+    - name: Archive new posts # NOTE: Requires the secrets in the env
+      run: clojure -M -m clj-tumblr-summarizer.main holyjak
+    # FIXME Upload to somewhere
+    - name: TMP - list results
+      run: ls data/*
