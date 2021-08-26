@@ -2,6 +2,7 @@
   "Utils for core async."
   (:require
     [clojure.core.async :as a :refer [<! >! <!! >! go go-loop close! chan]]
+    [clojure.java.io :as io]
     [clojure.test :refer [is]]))
 
 #_(defn chan-while
@@ -55,9 +56,13 @@
    (when-let [v (<!! ch)]
      (println "spit-chan -> " (format "data/out%s.edn" (id-fn v)))
      (binding [*print-length* nil, *print-level* nil]
-       ;; FIXME Handle errors
-       (spit (format "data/out%s.edn" (id-fn v))
-             (pr-str v)))
+       (let [->file #(spit (format "data/out%s.edn" (id-fn v))
+                           (pr-str v))]
+         (try
+           (->file)
+           (catch java.io.FileNotFoundException _
+             (io/make-parents "data/ignored")
+             (->file)))))
      (recur ch id-fn))))
 
 (defn tap-ch

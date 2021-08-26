@@ -11,7 +11,7 @@ Alpha, work in progress.
 * [x] Retrieve new posts, store them to the disk (minimal error handling)
 * [ ] [WIP] Put the posts into a Datalog datastore
 * [ ] Create monthly summaries of the newly published posts
-* [ ] Make it into an AWS Lambda, run monthly
+* [x] ~Make it into an AWS Lambda, run monthly~ Make [it into a scheduled GitHub action](.github/workflows/archive-new-posts.yml)
 * [ ] Error handling, robustness - see [Error handling in Clojure Core.Async (and its higher-level constructs)](https://blog.jakubholy.net/2019/core-async-error-handling/)
 
 ## Usage
@@ -19,7 +19,7 @@ Alpha, work in progress.
 ### Execution
 
 Assuming that you have the file `./.api-key` in this directory with the 
-Tumblr API key, you can run:
+[Tumblr API key](https://www.tumblr.com/settings/apps) (the *OAuth Consumer Key*), you can run:
 
     clojure -M -m clj-tumblr-summarizer.main <blog name, e.g. holyjak>
 

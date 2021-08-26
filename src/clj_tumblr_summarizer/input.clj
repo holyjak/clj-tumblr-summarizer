@@ -9,7 +9,7 @@
     [org.httpkit.client :as http])
   (:import (java.io PushbackReader)))
 
-(def api-key (slurp ".api-key"))
+(def api-key (str/replace (slurp ".api-key") "\n" ""))
 
 (defn fetch-post-batch-raw
   "Fetch 20 posts starting at the given offset, return the body (string) or throw
