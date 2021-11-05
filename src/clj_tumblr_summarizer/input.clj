@@ -18,7 +18,7 @@
   [href]
   {:pre [href]}
   (let [posts-url (str ; before=int - Returns posts published earlier than a specified Unix timestamp, in seconds.
-                    "http://api.tumblr.com" href "&api_key=" api-key)
+                    "https://api.tumblr.com" href "&api_key=" api-key)
         {:keys [status headers body error] :as resp} @(http/get posts-url)]
     (println "DBG fetched" href "->" status error)
     ;; NOTE: We get OK with empty posts when no more posts
