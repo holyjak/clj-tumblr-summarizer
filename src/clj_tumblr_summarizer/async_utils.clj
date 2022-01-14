@@ -51,7 +51,7 @@
   nil)
 
 (defn spit-chan
-  "Write N-th value into ./out(id-fn value).edn. Blocking."
+  "Write items into files, N-th value into ./data/out(id-fn value).edn. Blocking."
   ([ch id-fn]
    (when-let [v (<!! ch)]
      (println "spit-chan -> " (format "data/out%s.edn" (id-fn v)))
