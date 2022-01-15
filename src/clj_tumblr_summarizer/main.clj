@@ -31,5 +31,6 @@
     (store-new-posts blog-name)))
 
 (comment
+  ((requiring-resolve 'portal.api/close))
   (store-new-posts "holyjakXXX")
   nil)

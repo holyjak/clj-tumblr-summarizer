@@ -38,18 +38,56 @@
 
 
 (defn apply-formatting [text {:keys [type] :as formatting}]
-  (assert (= type "link")
-    (str "Unsupportid formatting type for :text content: " type " in " formatting))
-  [:a {:href (unredirect (:url formatting))} text])
+  (case type
+    "bold"
+    [:strong text]
+    "italic"
+    [:em text]
+    "link"
+    [:a {:href (unredirect (:url formatting))} text]
+    "small" ; FIXME: impl
+    text))
 
 (defn format-text-content [text formatting]
   (->> (segment-text text formatting)
        (map #(cond->> %
                (vector? %) (apply apply-formatting)))))
 
-(defn render-text-block [{mytxt :text, :keys [formatting]}]
+(defn render-image-block [{:keys [summary]} {:keys [attribution media]}]
+  (let [srcset (->> media
+                     (map (fn [{:keys [url width]}] (str url " " width)))
+                     (str/join ","))]
+    [:img {:src (:url attribution)
+           :srcset srcset
+           :alt summary}]))
+
+(defn render-link-block [{:keys [summary tags]} {:keys [url title description]}]
+  {:pre [url summary]}
+  (when (not= title summary)
+    (println "WARN: link: (not= title summary)" title "!=" summary))
+  [:span [:a {:href (unredirect url)} summary]
+   " [" (str/join "," tags) "]"
+   " - "
+   description])
+
+(defn render-text-block [_ {mytxt :text, :keys [formatting]}]
   (list [:br] (cond-> mytxt
                 (seq formatting) (format-text-content formatting))))
+
+(defn render-video-block [{:keys [summary]} 
+                          {{:keys [display_text]} :attribution
+                           :keys [embed_iframe embed_html url]}]
+  {:pre [url]}
+  (when (not= display_text summary)
+    (println "WARN: video: (not= display_text summary)" display_text "!=" summary))
+  [:span [:a {:href (unredirect url)} summary]])
+
+(defn render-block [post {:keys [type] :as block}]
+  (case type
+    "image" (render-image-block post block)
+    "link" (render-link-block post block)
+    "text" (render-text-block post block)
+    "video" (render-video-block post block)))
 
 (defn render-post [{:keys [content id layout summary tags type] :as post}]
   (assert (= type "blocks") (str " - :type " type " not supported yet"))
@@ -62,20 +100,8 @@
                              seq)]
     (throw (ex-info (str "Unsupported layout in " id (pr-str layout))
              {:id id, :layout layout, :bad bad-blocks})))
-  (let [{:strs [link text] :as all} (group-by :type content)
-        {:keys [url title description]} (first link)
-        unsupported (-> all keys set (set/difference #{"link" "text"}))]
-    (assert (empty? unsupported)
-      (str " - unsupported content types found: " unsupported))
-    (assert (< (count link) 2) (str " - ma 1 type=link content supported, got more " link))
-    (when (not= title summary)
-      (println "WARN: (not= title summary)" title "!=" summary))
-    [:div
-     [:p [:a {:href (unredirect url)} summary]
-      " [" (str/join "," tags) "]"
-      " - "
-      description
-      (map text render-text-block)]]))
+  [:p
+   (map #(render-block post %) content)])
 
 (comment
 
@@ -91,24 +117,8 @@
      (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type]))))
 
   (def meander (->> posts (filter #(= 186840427164 (:id %))) first))
-  (def meander2
-    {:content [{:type "link"
-                :url "https://t.umblr.com/redirect?z=http%3A%2F%2Ftimothypratley.blogspot.com%2F2019%2F01%2Fmeander-answer-to-map-fatigue.html&t=OThhODBiN2RkOWQ0NmYwNjQ4ODJhNzEzMWZkZGZlZjU0ZmE5NzgxYyxkOTQ3OWMzZjU5YTNiZWVmNjM3NjBlZDBhM2VjODQwZWQyZjk1ZDc2"
-              ;:display_url "https://t.umblr.com/redirect?z=http%3A%2F%2Ftimothypratley.blogspot.com%2F2019%2F01%2Fmeander-answer-to-map-fatigue.html&t=OThhODBiN2RkOWQ0NmYwNjQ4ODJhNzEzMWZkZGZlZjU0ZmE5NzgxYyxkOTQ3OWMzZjU5YTNiZWVmNjM3NjBlZDBhM2VjODQwZWQyZjk1ZDc2", 
-                :title "Meander: The answer to map fatigue"
-                :description "Programing in Clojure and ClojureScript"
-              ;:site_name "timothypratley.blogspot.com", 
-                #_#_:poster [{:media_key "6cf6626447e26b1700b2d59184b9834f:c93a72bd99c2bbdc-71", :type "image/jpeg", :width 259, :height 136, :url "https://64.media.tumblr.com/6cf6626447e26b1700b2d59184b9834f/c93a72bd99c2bbdc-71/s400x600/e0b2ba95d3e057f0db0b7a2f32610b9d15588e57.jpg"}]}
-               {:type "text"
-                :text "Meander is a very nice-looking library for declarative data transformations in
- Clojure, using pattern matching and logic-programming-like \"unification\", yielding a very clean, concise, and clear code. ♥️"
-                :formatting [{:type "link", :start 0, :end 7, :url "https://href.li/?https://github.com/noprompt/meander/blob/delta/README.md"}]}]
-     :id 186840427164
-     :layout [{:type "rows", :display [{:blocks [0]} {:blocks [1]}]}]
-     :summary "Meander: The answer to map fatigue"
-     :tags ["clojure" "library" "data processing"]
-     :timestamp 1565191242
-     :type "blocks"})
+  (def video (->> posts (filter #(= 189328582874 (:id %))) first))
+  (-> video :content first tap>)
   
   (def failed
     (->> posts
@@ -132,17 +142,21 @@
        (clojure.pprint/pprint))
   (first failed)
   (tap> failed)
+  video
+  (keys video)
 
-
-
-  ()
-
-  (pr (render-post meander2))
-  (tap> (with-meta (render-post meander2)
+  (pr (render-post meander))
+  (tap> (with-meta (render-post meander)
           {:portal.viewer/default :portal.viewer/hiccup}))
-  )
-  (tap> (with-meta (render-post meander2) 
-          {:portal.viewer/default :portal.viewer/tree}))
+  
+  (pr (with-meta [:div (map #(list [:hr]
+                                 [:a {:href (:post_url %)} "src"]
+                                 (render-post %)) 
+                           posts)]
+          {:portal.viewer/default :portal.viewer/hiccup}))
+  
+  (tap> (with-meta (render-post meander) 
+          {:portal.viewer/default :portal.viewer/tree})))
 
 
   
