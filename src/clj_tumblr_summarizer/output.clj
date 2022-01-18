@@ -18,40 +18,88 @@
 
     :else url))
 
-(defn segment-text
-  "Segment the `text` into as-is strings and pairs of `[substring formatting]`"
-  [text breakpoints]
-  (loop [pos 0
-         [{:keys [start end] :as point} & points] (sort-by :start breakpoints)
-         res []]
-    (when point
-      (assert (some-> start int?) (str "Unexpected formatting w/o start: " point))
-      (assert (some-> end int?) (str "Unexpected formatting w/o end: " point)))
-    (if point
-      (recur
-        end
-        points
-        (conj res
-          (subs text pos start)
-          [(subs text start end) point]))
-      (remove empty? (conj res (subs text pos))))))
 
+(defn subrange? [[s1 s2] [b1 b2]]
+  (and (>= s1 b1) (<= s2 b2)))
 
-(defn apply-formatting [text {:keys [type] :as formatting}]
+(defn subranges-first-compare
+  "Compare for ranges (i.e. `[<from> <to>]`) where subranges come before their parent"
+  [r1 r2]
+  (cond
+    (subrange? r1 r2) -1
+    (subrange? r2 r1) +1
+    :else
+    (compare r1 r2)))
+
+(defn ->formatting-node [subtext offset {:keys [start end] :as formatting-elm}]
+  {:pre [(>= start offset) (<= end (+ offset (count subtext)))]}
+  {:start offset
+   :end (+ offset (count subtext))
+   :children (->> [(subs subtext 0 start)
+                   {:text (subs subtext start end) :format formatting-elm}
+                   (subs subtext end)]
+                  (remove empty?))})
+
+(def ->range (juxt :start :end))
+
+(defn apply-formatting [target {:keys [type url] :as formatting-elm}]
   (case type
     "bold"
-    [:strong text]
+    [:strong target]
     "italic"
-    [:em text]
+    [:em target]
     "link"
-    [:a {:href (unredirect (:url formatting))} text]
-    "small" ; FIXME: impl
-    text))
+    [:a {:href (unredirect url)} target]
+    "small"
+    [:span {:style "font-size: small"} target]))
+
+(defn ->sparse-formatting-tree [text formatting]
+  {:start 0
+   :end (count text)
+   ::children
+   (->> formatting
+        (sort-by (juxt :start :end) subranges-first-compare)
+        (reduce
+          (fn [prev-nodes {:keys [start end] :as current-fmt}]
+            (let [[children prev-nodes']
+                  (split-with #(subrange? (->range %) (->range current-fmt)) prev-nodes)]
+              (conj prev-nodes'
+                (merge current-fmt
+                  (if (seq children)
+                    {::children children}
+                    {::text (subs text start end)})))))
+          (list)))})
+
+(defn apply-formatting-tree [text {:keys [start end ::children] :as formatting-tree}]
+  (let [strings (map
+                  (partial subs text)
+                  (cons start (map :end children))
+                  (concat (map :start children) [end]))]
+    (rest
+      (->>
+       (interleave
+         (->> children
+              (map
+                #(apply-formatting
+                   (if (::children %)
+                     (apply-formatting-tree text %)
+                     (::text %))
+                   %))
+              (cons nil)) ; interleave needs same # elms; `rest` will drop it again
+         strings)
+       (remove #{""})))))
 
 (defn format-text-content [text formatting]
-  (->> (segment-text text formatting)
-       (map #(cond->> %
-               (vector? %) (apply apply-formatting)))))
+  (->> formatting
+       (->sparse-formatting-tree text)
+       (apply-formatting-tree text)))
+
+(comment
+  (clojure.pprint/pprint ; tap>
+    (format-text-content
+      "UncleJim is a very interesting looking library, with these main features:"
+      [{:type "bold", :start 0, :end 73} {:type "link", :start 0, :end 8, :url "https://href.li/?https://github.com/GlenKPeterson/UncleJim"}])))
+
 
 (defn render-image-block [{:keys [summary]} {:keys [attribution media]}]
   (let [srcset (->> media
@@ -70,6 +118,7 @@
    " - "
    description])
 
+;; FIXME: Handle `:subtype "heading1"`
 (defn render-text-block [_ {mytxt :text, :keys [formatting]}]
   (list [:br] (cond-> mytxt
                 (seq formatting) (format-text-content formatting))))
@@ -100,8 +149,14 @@
                              seq)]
     (throw (ex-info (str "Unsupported layout in " id (pr-str layout))
              {:id id, :layout layout, :bad bad-blocks})))
-  [:p
-   (map #(render-block post %) content)])
+  (try
+    [:p
+     (doall (map #(render-block post %) content))]
+    (catch Exception e
+      (throw (ex-info
+               (str "Failed to render post #" id ": " (ex-message e))
+               {:post post, :err e}
+               e)))))
 
 (comment
 
@@ -117,8 +172,10 @@
      (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type]))))
 
   (def meander (->> posts (filter #(= 186840427164 (:id %))) first))
-  (def video (->> posts (filter #(= 189328582874 (:id %))) first))
-  (-> video :content first tap>)
+  (def post (->> posts (filter #(= 130046336929 (:id %))) first))
+  (->> post :content first (render-text-block nil))
+  (render-post post)
+  (doall (map #(render-block post %) (:content post)))
   
   (def failed
     (->> posts
@@ -149,64 +206,17 @@
   (tap> (with-meta (render-post meander)
           {:portal.viewer/default :portal.viewer/hiccup}))
   
-  (pr (with-meta [:div (map #(list [:hr]
-                                 [:a {:href (:post_url %)} "src"]
-                                 (render-post %)) 
-                           posts)]
-          {:portal.viewer/default :portal.viewer/hiccup}))
+  (pr (mapv #(do
+               (print "ID #" (:id %))
+               (println (render-post %)))
+        posts))
   
   (tap> (with-meta (render-post meander) 
           {:portal.viewer/default :portal.viewer/tree})))
 
 
-  
-
 #_(def sample (json/read-str
                 (slurp "sample-post.json")))
-;(def sample (edn/read-string
-;                (slurp "sample-post.edn")))
-;
-;(defn link-item [{:keys [url
-;                         description
-;                         post_url
-;                         tags
-;                         timestamp
-;                         title]}]
-;  (h/html
-;   [:article
-;    [:h5
-;     [:a {:href url} title]]
-;    [:p description]]))
-;
-;(defn text-item [{:keys [body
-;                         post_url
-;                         tags
-;                         timestamp
-;                         title]}]
-;  (h/html
-;    [:article
-;     [:h5 title]
-;     [:p body]]))
-;
-;(defn quote-item [{:keys [text
-;                          source
-;                          post_url
-;                          tags
-;                          timestamp
-;                          title]}]
-;  (h/html
-;    [:article
-;     [:blockquote text]
-;     [:p source]]))
-;
-;(defn item [post]
-;  (condp = (:type post)
-;    "link" (link-item post)
-;    "text" (text-item post)
-;    "quote" (quote-item post)))
 
-(comment
-
-  (spit "out.html" (str/join "" (map item sample))))
 
 
