@@ -1,0 +1,1 @@
+{:tasks {run (clojure "-M" "-m" "clj-tumblr-summarizer.main" "holyjak")}}

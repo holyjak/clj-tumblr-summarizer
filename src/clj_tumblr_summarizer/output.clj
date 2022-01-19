@@ -31,15 +31,6 @@
     :else
     (compare r1 r2)))
 
-(defn ->formatting-node [subtext offset {:keys [start end] :as formatting-elm}]
-  {:pre [(>= start offset) (<= end (+ offset (count subtext)))]}
-  {:start offset
-   :end (+ offset (count subtext))
-   :children (->> [(subs subtext 0 start)
-                   {:text (subs subtext start end) :format formatting-elm}
-                   (subs subtext end)]
-                  (remove empty?))})
-
 (def ->range (juxt :start :end))
 
 (defn apply-formatting [target {:keys [type url] :as formatting-elm}]
@@ -48,11 +39,14 @@
     [:strong target]
     "italic"
     [:em target]
+    "mention"
+    target ;; not sure what this should be
     "link"
     [:a {:href (unredirect url)} target]
     "small"
     [:span {:style "font-size: small"} target]))
 
+;; FIXME: Handle rendering 665732322540322816 How to extend clj proto.
 (defn ->sparse-formatting-tree [text formatting]
   {:start 0
    :end (count text)
@@ -66,12 +60,14 @@
               (conj prev-nodes'
                 (merge current-fmt
                   (if (seq children)
-                    {::children children}
+                    {::children (reverse children)}
                     {::text (subs text start end)})))))
-          (list)))})
+          (list))
+        (reverse)
+        (doall))})
 
 (defn apply-formatting-tree [text {:keys [start end ::children] :as formatting-tree}]
-  (let [strings (map
+  (let [strings (mapv
                   (partial subs text)
                   (cons start (map :end children))
                   (concat (map :start children) [end]))]
@@ -87,19 +83,19 @@
                    %))
               (cons nil)) ; interleave needs same # elms; `rest` will drop it again
          strings)
-       (remove #{""})))))
+       (remove #{""})
+       (doall)))))
 
 (defn format-text-content [text formatting]
   (->> formatting
        (->sparse-formatting-tree text)
        (apply-formatting-tree text)))
 
-(comment
-  (clojure.pprint/pprint ; tap>
-    (format-text-content
-      "UncleJim is a very interesting looking library, with these main features:"
-      [{:type "bold", :start 0, :end 73} {:type "link", :start 0, :end 8, :url "https://href.li/?https://github.com/GlenKPeterson/UncleJim"}])))
-
+(defn render-audio-block [{:keys [summary]}
+                          {:keys [artist embed_html embed_url title url]}]
+  {:pre [url]}
+  ;; Ex. artist 'JUXT Cast', title 'S2E3 - re:Clojure Interviews 3 - Jakub Holý, ...'
+  [:span "🎧" [:a {:href (unredirect url)} summary]])
 
 (defn render-image-block [{:keys [summary]} {:keys [attribution media]}]
   (let [srcset (->> media
@@ -111,15 +107,16 @@
 
 (defn render-link-block [{:keys [summary tags]} {:keys [url title description]}]
   {:pre [url summary]}
+  #_
   (when (not= title summary)
     (println "WARN: link: (not= title summary)" title "!=" summary))
-  [:span [:a {:href (unredirect url)} summary]
+  [:span "👓" [:a {:href (unredirect url)} summary]
    " [" (str/join "," tags) "]"
    " - "
    description])
 
 ;; FIXME: Handle `:subtype "heading1"`
-(defn render-text-block [_ {mytxt :text, :keys [formatting]}]
+(defn render-text-block [_ {mytxt :text, :keys [formatting subtype]}]
   (list [:br] (cond-> mytxt
                 (seq formatting) (format-text-content formatting))))
 
@@ -127,12 +124,14 @@
                           {{:keys [display_text]} :attribution
                            :keys [embed_iframe embed_html url]}]
   {:pre [url]}
+  #_
   (when (not= display_text summary)
     (println "WARN: video: (not= display_text summary)" display_text "!=" summary))
-  [:span [:a {:href (unredirect url)} summary]])
+  [:span "🎥" [:a {:href (unredirect url)} summary]])
 
 (defn render-block [post {:keys [type] :as block}]
   (case type
+    "audio" (render-audio-block post block)
     "image" (render-image-block post block)
     "link" (render-link-block post block)
     "text" (render-text-block post block)
@@ -172,11 +171,12 @@
      (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type]))))
 
   (def meander (->> posts (filter #(= 186840427164 (:id %))) first))
-  (def post (->> posts (filter #(= 130046336929 (:id %))) first))
-  (->> post :content first (render-text-block nil))
+  (def post (->> posts (filter #(= 665732322540322816 (:id %))) first))
+  (clojure.pprint/pprint
+    (->> post :content second :type))
   (render-post post)
   (doall (map #(render-block post %) (:content post)))
-  
+
   (def failed
     (->> posts
          (mapv
@@ -185,13 +185,13 @@
               (catch Throwable e
                 [:FAIL (:id %) (ex-message e)])))
          (remove nil?)))
-  
+
   (count posts) ;; => 791
   (count failed) ;; => 101
   (->> failed (map #(nth % 2)) set count) ; 5 uniq errs
   ;; TODO: Content type "video" "image" "audio"
-  (->> failed 
-       (map #(nth % 2)) 
+  (->> failed
+       (map #(nth % 2))
        (group-by identity)
        (map (fn [[k v]] [k (count v)]))
        (sort-by second)
@@ -202,21 +202,34 @@
   video
   (keys video)
 
+  (tap> (with-meta [:h3 "test html!"]
+          {:portal.viewer/default :portal.viewer/hiccup}))
+
   (pr (render-post meander))
   (tap> (with-meta (render-post meander)
           {:portal.viewer/default :portal.viewer/hiccup}))
-  
-  (pr (mapv #(do
-               (print "ID #" (:id %))
-               (println (render-post %)))
-        posts))
-  
-  (tap> (with-meta (render-post meander) 
-          {:portal.viewer/default :portal.viewer/tree})))
+
+  (run! #(try (println (render-post %)) (print \.)
+           (catch Exception e
+             (println "ERROR Failed to render ID " (:id %) ":" e)
+             (throw e))) 
+    posts)
+  (-> [:div (map #(render-post %) posts)]
+      (with-meta {:portal.viewer/default :portal.viewer/hiccup})
+      (tap>))
+
+  (tap> (with-meta (render-post meander)
+          {:portal.viewer/default :portal.viewer/tree}))
+  )
 
 
 #_(def sample (json/read-str
                 (slurp "sample-post.json")))
 
+;; FIXME:
+;; WARN: link: (not= title summary) Plausible Analytics != Plausible Analytics | Simple, privacy-friendly alternative to Google Analytics
+;; WARN: link: (not= title summary) GitHub - you-dont-need/You-Dont-Need-Momentjs: List of functions which you can use to replace moment.js + ESLint Plugin 
+;;                                  != you-dont-need/You-Dont-Need-Momentjs: List of functions which you can use to replace moment.js + ESLint Plugin
+ 
 
 

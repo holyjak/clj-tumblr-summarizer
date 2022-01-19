@@ -4,3 +4,8 @@ data/
 lib-nonredistributable/
 nongit/
 .lsp/
+.calva/
+.clj-kondo/
+.nrepl-port
+.portal/
+.vscode/
