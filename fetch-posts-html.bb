@@ -1,3 +1,4 @@
+#!/usr/bin/env bb
 ;; For each of the cached post, fetch the HTML of the original post 
 ;; (ignoring the surrounding page) and put it inside a map id -> html stored
 ;; inside the file `orig-posts.edn`
@@ -38,5 +39,6 @@
        (pmap (fn [[id url]]
                [id (url->post-html url)]))
        vec
+       (into {})
        (pr-str)
        (spit "orig-posts.edn")))

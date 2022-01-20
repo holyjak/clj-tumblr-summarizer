@@ -2,7 +2,7 @@
   "Produce a page summarizing your Tumblr posts of the month."
   (:require
    [hiccup.core :as h]
-   [clojure.data.json :as json]
+   [hiccup.util :as h.util]
    [clojure.edn :as edn]
    [clojure.set :as set]
    [clojure.string :as str]
@@ -46,7 +46,6 @@
     "small"
     [:span {:style "font-size: small"} target]))
 
-;; FIXME: Handle rendering 665732322540322816 How to extend clj proto.
 (defn ->sparse-formatting-tree [text formatting]
   {:start 0
    :end (count text)
@@ -95,7 +94,7 @@
                           {:keys [artist embed_html embed_url title url]}]
   {:pre [url]}
   ;; Ex. artist 'JUXT Cast', title 'S2E3 - re:Clojure Interviews 3 - Jakub Holý, ...'
-  [:span "🎧" [:a {:href (unredirect url)} summary]])
+  [:span "🎧 " [:a {:href (unredirect url)} summary]])
 
 (defn render-image-block [{:keys [summary]} {:keys [attribution media]}]
   (let [srcset (->> media
@@ -110,15 +109,30 @@
   #_
   (when (not= title summary)
     (println "WARN: link: (not= title summary)" title "!=" summary))
-  [:span "👓" [:a {:href (unredirect url)} summary]
-   " [" (str/join "," tags) "]"
-   " - "
-   description])
+  [:span.link "👓 " [:a {:href (unredirect url)} summary]
+   (when (seq tags)
+     (list " [" (str/join ", " tags) "]"))
+   (when description
+     (list " - "
+       [:q description] ""))])
 
-;; FIXME: Handle `:subtype "heading1"`
+(defn apply-text-subtype [formatted-text subtype]
+  (case subtype
+    "heading1" (list [:strong formatted-text] [:br])
+    "heading2" (list [:em formatted-text] [:br])
+    "indented" [:div.indented {:style "padding-left: 1em"} formatted-text]
+    "ordered-list-item" [:li formatted-text] ; FIXME: Wrap all these in ol/ul, drop <br> between the blocks
+    "quote" [:blocquote formatted-text]
+    "unordered-list-item" [:li formatted-text]))
+
+;; TODO: turn \n\n into <br> or set css to respect it? See 107205933254
+;; TODO: skip heading2 texts that == the following link text
+;; TODO: Tags for link-less posts
+;; TODO: ? auto-link URLs - see e.g. 662792835392831488
 (defn render-text-block [_ {mytxt :text, :keys [formatting subtype]}]
   (list [:br] (cond-> mytxt
-                (seq formatting) (format-text-content formatting))))
+                (seq formatting) (format-text-content formatting)
+                subtype          (apply-text-subtype subtype))))
 
 (defn render-video-block [{:keys [summary]} 
                           {{:keys [display_text]} :attribution
@@ -127,7 +141,7 @@
   #_
   (when (not= display_text summary)
     (println "WARN: video: (not= display_text summary)" display_text "!=" summary))
-  [:span "🎥" [:a {:href (unredirect url)} summary]])
+  [:span "🎥 " [:a {:href (unredirect url)} summary]])
 
 (defn render-block [post {:keys [type] :as block}]
   (case type
@@ -168,7 +182,7 @@
      seq
      (map #(edn/read-string (slurp %)))
    ;; TODO: does lways summary == content[t=link].title ?
-     (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type]))))
+     (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type :post_url]))))
 
   (def meander (->> posts (filter #(= 186840427164 (:id %))) first))
   (def post (->> posts (filter #(= 665732322540322816 (:id %))) first))
@@ -214,9 +228,21 @@
              (println "ERROR Failed to render ID " (:id %) ":" e)
              (throw e))) 
     posts)
-  (-> [:div (map #(render-post %) posts)]
-      (with-meta {:portal.viewer/default :portal.viewer/hiccup})
-      (tap>))
+  
+  (def id->post-html (-> (slurp "orig-posts.edn") (clojure.edn/read-string)))
+
+  (spit "out.html"
+    (h/html
+      [:meta {:charset "utf-8"}]
+      [:body
+       [:table
+        (map #(list
+               [:tr [:td {:colspan 2} [:hr] [:a {:href (:post_url %)} "src"]]] 
+                [:tr
+                 [:td {:style "width: 50%"} (render-post %)]
+                 [:td {:style "width: 50%"} (h.util/raw-string (-> % :id id->post-html))]]) 
+          posts)]]))
+  
 
   (tap> (with-meta (render-post meander)
           {:portal.viewer/default :portal.viewer/tree}))
