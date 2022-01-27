@@ -1,4 +1,4 @@
-(ns clj-tumblr-summarizer.db
+(ns clj-tumblr-summarizer.storage.db
   "EXPERIMENTAL: Storage of posts into a DB"
   (:require
     [datomic.client.api :as d]))

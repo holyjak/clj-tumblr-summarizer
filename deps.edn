@@ -2,7 +2,7 @@
            :reveal {:extra-deps {vlaaad/reveal {:mvn/version "1.0.130"}}
                     :main-opts ["-m" "vlaaad.reveal" "repl"]}}
  :deps {;vlaaad/reveal {:mvn/version "1.0.130"}
-
+        babashka/fs {:mvn/version "0.1.2"}
         org.clojure/clojure {:mvn/version "1.10.1"}
         http-kit/http-kit {:mvn/version "2.5.0"}
         ;cognitect/dev-local {:local/root "lib-nonredistributable/dev-local-0.9.225.jar"} ; TODO Move to private S3, see https://kwill.dev/posts/testing-with-datomic-dev-local/
