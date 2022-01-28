@@ -29,7 +29,7 @@ Currently only available as a git dependency for deps-tools:
 
 ```clojure
 ;; deps.edn
-{:deps {io.github.holyjak/clj_tumblr_summarizer {:git/tag "v1.0.0" :git/sha "c5cbf71"}}}}
+{:deps {io.github.holyjak/clj_tumblr_summarizer {:git/tag "v1.0.1" :git/sha "ed8e44f"}}}}
 ```
 
 ```clojure
