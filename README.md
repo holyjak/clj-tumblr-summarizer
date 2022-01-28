@@ -29,7 +29,7 @@ Currently only available as a git dependency for deps-tools:
 
 ```clojure
 ;; deps.edn
-{:deps {io.github.holyjak/clj_tumblr_summarizer {:git/tag "v1.0.1" :git/sha "ed8e44f"}}}}
+{:deps {io.github.holyjak/clj-tumblr-summarizer {:git/tag "v1.0.1" :git/sha "ed8e44f"}}}}
 ```
 
 ```clojure
@@ -84,4 +84,4 @@ To compare the look of the summarized posts with the original posts:
 
 Copyright © 2020-2022 Jakub Holý
 
-Distributed under the Eclipse Public License either version 1.0. 
+Distributed under the MIT License
