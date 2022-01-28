@@ -1,1 +1,4 @@
-{:tasks {run (clojure "-M" "-m" "clj-tumblr-summarizer.main" "holyjak")}}
+{:tasks {run {:doc "Download posts added after the previous run" 
+              :task (clojure "-M" "-m" "clj-tumblr-summarizer.main")}
+         summarize {:doc "Create an HTML summary of (already downloaded) posts from the previous month" 
+                    :task (clojure "-X:summarize")}}}

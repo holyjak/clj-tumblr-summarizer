@@ -31,7 +31,7 @@ jobs:
       env:
         TUMBLR_API_KEY: ${{ secrets.TUMBLR_API_KEY }}
     - name: Archive new posts # NOTE: Requires the secrets in the env
-      run: clojure -M -m clj-tumblr-summarizer.main holyjak
+      run: clojure -M -m clj-tumblr-summarizer.main
       # FIXME !!! Fails with 'URISyntaxException: Illegal character in query at index 122: http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?npf=true&api_key=***'
     - name: Upload to S3
       run: aws s3 sync ./data "s3://$BUCKET"

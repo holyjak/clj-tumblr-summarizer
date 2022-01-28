@@ -198,6 +198,12 @@
                {:post post, :err e}
                e)))))
 
+(defn render-posts [fname posts]
+  (spit fname
+    (h/html
+      [:meta {:charset "utf-8"}]
+      [:body (map render-post posts)])))
+
 (comment
 
   (def posts

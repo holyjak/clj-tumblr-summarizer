@@ -14,8 +14,10 @@
   (-> (.getFileName file-path) str fname->ts))
 
 (defn posts-in-time-range 
-  "Return a seq of all posts published withing the given `time-range`,
-   which is in epoch seconds (inclusie, exclusive)"
+  "Return a seq of all posts published withing the given `time-range`
+  sorted by date.
+
+  `time-range` - in epoch seconds, [inclusive, exclusive)"
   [[start-sec end-sec]]
   (->>
    (fs/list-dir data-dir
