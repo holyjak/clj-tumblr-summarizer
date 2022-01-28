@@ -72,8 +72,16 @@ This is work in progress - see `.github/workflows/archive-new-posts.yml`.
 * [x] Run as a scheduled action (commented out but possible and working)
 * [ ] Only retrieve new posts since the previous back up - need to get the state from S3
 
+## Testing the generated summary against the original posts
+
+To compare the look of the summarized posts with the original posts:
+
+1. Run `bb run` to fetch the posts
+2. Run `./fetch-posts-html.bb` to fetch the HTML of all the posts
+3. Run `(clj-tumblr-summarizer.output/compare-summary-and-original-visuals)` in the REPL and open the produced comparison.html in a browser
+
 ## License
 
-Copyright © 2020 Jakub Holý
+Copyright © 2020-2022 Jakub Holý
 
 Distributed under the Eclipse Public License either version 1.0. 

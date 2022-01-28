@@ -204,18 +204,33 @@
       [:meta {:charset "utf-8"}]
       [:body (map render-post posts)])))
 
-(comment
+(defn compare-summary-and-original-visuals []
+  (let [posts
+        (->>
+         (.listFiles (io/file "data")
+                     (reify java.io.FileFilter
+                       (accept [_ f]
+                         (and (.isFile f) (str/ends-with? (.getName f) ".edn")))))
+         seq
+         (map #(edn/read-string (slurp %)))
+         (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type :post_url])))
 
-  (def posts
-    (->>
-     (.listFiles (io/file "data")
-                 (reify java.io.FileFilter
-                   (accept [_ f]
-                     (and (.isFile f) (str/ends-with? (.getName f) ".edn")))))
-     seq
-     (map #(edn/read-string (slurp %)))
-   ;; TODO: does lways summary == content[t=link].title ?
-     (map #(select-keys % [:content :id :layout :summary :tags :timestamp :type :post_url]))))
+        id->post-html 
+        (or (-> (slurp "orig-posts.edn") (clojure.edn/read-string))
+          (ex-info "No `orig-posts.edn`?! Run `./fetch-posts-html.bb`" {}))]
+    (spit "comparison.html"
+      (h/html
+        [:meta {:charset "utf-8"}]
+        [:body
+         [:table
+          (map #(list
+                  [:tr [:td {:colspan 2} [:hr] [:a {:href (:post_url %)} "src"]]]
+                  [:tr
+                   [:td {:style "width: 50%"} (render-post %)]
+                   [:td {:style "width: 50%"} (h.util/raw-string (-> % :id id->post-html))]])
+            posts)]]))))
+
+(comment
 
   (def post (->> posts (filter #(= 665732322540322816 (:id %))) first))
   (doall (map #(render-block post %) (:content post)))
@@ -230,20 +245,6 @@
              (println "ERROR Failed to render ID " (:id %) ":" e)
              (throw e)))
     posts)
-
-  (def id->post-html (-> (slurp "orig-posts.edn") (clojure.edn/read-string)))
-
-  (spit "out.html"
-    (h/html
-      [:meta {:charset "utf-8"}]
-      [:body
-       [:table
-        (map #(list
-                [:tr [:td {:colspan 2} [:hr] [:a {:href (:post_url %)} "src"]]]
-                [:tr
-                 [:td {:style "width: 50%"} (render-post %)]
-                 [:td {:style "width: 50%"} (h.util/raw-string (-> % :id id->post-html))]])
-          posts)]]))
 
   )
 
