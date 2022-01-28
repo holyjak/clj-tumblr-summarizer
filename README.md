@@ -65,7 +65,13 @@ bb summarize
 
 ### As a scheduled GitHub Action
 
-See `.github/workflows/archive-new-posts.yml` for an work-in-progress example.
+This is work in progress - see `.github/workflows/archive-new-posts.yml`.
+
+* [x] Retrieve _all_ posts
+* [x] Back the posts up to AWS S3
+* [x] Run as a scheduled action (commented out but possible and working)
+* [ ] Only retrieve new posts since the previous back up - need to get the state from S3
+
 ## License
 
 Copyright © 2020 Jakub Holý
