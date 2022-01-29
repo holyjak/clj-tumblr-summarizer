@@ -22,13 +22,14 @@
 (defn store-new-posts
   "Fetch all posts from the given Tumblr blog and dump them into files."
   [blog-name]
-  (let [previous-ts      (<!! (in/max-post-timestamp-ch (in/data-files->posts-chan)))
+  (let [previous-ts      (in/max-stored-post-timestamp)
         posts-ch (chan 1 (take-while #(> (:timestamp %)
                                          previous-ts)))
         stop (chan)]
     (in/fetch-posts-async! blog-name posts-ch stop)
     (au/spit-chan posts-ch (fn [{:keys [id timestamp]}]
-                             (str timestamp "-" id)))
+                             (str timestamp "-" id))
+      :timestamp)
     (a/close! stop)))
 
 (defn -main [& _]

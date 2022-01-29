@@ -3,9 +3,11 @@
   (:require
     [clojure.core.async :as a :refer [chan >!! <!! close!]]
     [clojure.data.json :as json]
+    [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.string :as str]
     [clj-tumblr-summarizer.async-utils :as au]
+    [clj-tumblr-summarizer.storage.fs :as fs]
     [org.httpkit.client :as http])
   (:import (java.io PushbackReader)))
 
@@ -112,7 +114,7 @@
                         (filter #(clojure.string/ends-with? (.getName %) ".edn"))
                         (map clojure.java.io/reader)
                         (map #(PushbackReader. %))
-                        (map clojure.edn/read)
+                        (map edn/read)
                         #_(map (juxt :date :slug))))]
 
     (a/thread
@@ -136,3 +138,9 @@
     (a/<! (->> (chan 1 (map :timestamp))
                (a/pipe posts-ch)
                (a/reduce max 0)))))
+
+(defn max-stored-post-timestamp 
+  "Return the timestamp (sec since epoch) if the newest stored post"
+  []
+  (or (fs/read-max-timestamp)
+    (<!! (max-post-timestamp-ch (data-files->posts-chan)))))

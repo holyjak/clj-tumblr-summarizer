@@ -1,9 +1,10 @@
 (ns clj-tumblr-summarizer.async-utils
   "Utils for core async."
   (:require
-    [clojure.core.async :as a :refer [<! >! <!! >! go go-loop close! chan]]
-    [clojure.java.io :as io]
-    [clojure.test :refer [is]]))
+   [clojure.core.async :as a :refer [<! >! <!! >! go go-loop close! chan]]
+   [clojure.java.io :as io]
+   [clojure.test :refer [is]]
+   [clj-tumblr-summarizer.storage.fs :as fs]))
 
 #_(defn chan-while
     "Like `take-while` applied to a channel, closing
@@ -13,11 +14,11 @@
     (let [filtered (a/chan 1 (take-while pred))]
       (a/pipe src filtered)
       (a/go-loop []
-               (if-let [val (<! filtered)]
-                 (and (>! dst val)
-                      (recur))
-                 (do (a/close! src)
-                     (a/close! dst))))))
+        (if-let [val (<! filtered)]
+          (and (>! dst val)
+            (recur))
+          (do (a/close! src)
+            (a/close! dst))))))
 
 (defn async-iterate
   "Similar to `clojure.core/iterate` but working with a producer process rather then a function.
@@ -36,7 +37,7 @@
           (a/put! to-producer v)
           (recur (<! from-producer)))
         (do (run! close! [to-producer produced-vals])
-            (println "DBG async-iterate done, closing all"))))
+          (println "DBG async-iterate done, closing all"))))
     produced-vals))
 
 (comment
@@ -51,19 +52,18 @@
   nil)
 
 (defn spit-chan
-  "Write items into files, N-th value into ./data/out(id-fn value).edn. Blocking."
-  ([ch id-fn]
-   (when-let [v (<!! ch)]
-     (println "spit-chan -> " (format "data/out%s.edn" (id-fn v)))
-     (binding [*print-length* nil, *print-level* nil]
-       (let [->file #(spit (format "data/out%s.edn" (id-fn v))
-                           (pr-str v))]
-         (try
-           (->file)
-           (catch java.io.FileNotFoundException _
-             (io/make-parents "data/ignored")
-             (->file)))))
-     (recur ch id-fn))))
+  "Write items into files, N-th value into ./data/out(id-fn value).edn. Blocking.
+   If `timestamp-fn` is provide then it will also store the max timestamp."
+  ([ch id-fn timestamp-fn]
+    (loop [ch ch, max-ts nil]
+      (if-let [v (<!! ch)]
+        (do
+          (println "spit-chan -> " (format "data/out%s.edn" (id-fn v)))
+          (fs/write-post v (format "out%s.edn" (id-fn v)))
+          (recur ch (when (and timestamp-fn (timestamp-fn v))
+                      (cond-> (timestamp-fn v)
+                        max-ts (max max-ts)))))
+        (some-> max-ts fs/write-max-timestamp)))))
 
 (defn tap-ch
   "(Troubleshooting) Make a channel that puts every value inserted into it onto `tap>` and also reports when closed."
@@ -72,7 +72,7 @@
     (a/go-loop []
       (if-let [val (a/<! ch)]
         (do (tap> [:print-ch val])
-            (recur))
+          (recur))
         (tap> [:print-ch :CLOSED])))
     ch))
 
@@ -95,17 +95,17 @@
 (comment
   (def src (a/to-chan! [1 3 5 2 4 6]))
 
-  (spit-chan (a/to-chan! [{:some "map" :is "here"}]))
+  (spit-chan (a/to-chan! [{:some "map" :is "here"}]) (constantly nil))
 
 
 
   (defn print-ch []
     (let [ch (a/chan)]
       (a/go-loop []
-                 (if-let [val (a/<! ch)]
-                   (do (println "VAL: " val)
-                       (recur))
-                   (println "CLOSED dst")))
+        (if-let [val (a/<! ch)]
+          (do (println "VAL: " val)
+            (recur))
+          (println "CLOSED dst")))
       ch))
 
   (chan-while src (print-ch) odd?)

@@ -42,3 +42,6 @@
 
 (defn zdt->year [^ZonedDateTime zdt]
   (.getYear zdt))
+
+(comment
+  (str (epoch-ts->zdt 1615633012)))
