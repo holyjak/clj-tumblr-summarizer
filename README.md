@@ -29,7 +29,7 @@ Currently only available as a git dependency for deps-tools:
 
 ```clojure
 ;; deps.edn
-{:deps {io.github.holyjak/clj-tumblr-summarizer {:git/tag "v1.0.2" :git/sha "479a176"}}}}
+{:deps {io.github.holyjak/clj-tumblr-summarizer {:git/tag "v1.0.3" :git/sha "51d01e0"}}}}
 ```
 
 ```clojure
@@ -65,12 +65,7 @@ bb summarize
 
 ### As a scheduled GitHub Action
 
-This is work in progress - see `.github/workflows/archive-new-posts.yml`.
-
-* [x] Retrieve _all_ posts
-* [x] Back the posts up to AWS S3
-* [x] Run as a scheduled action (commented out but possible and working)
-* [ ] Only retrieve new posts since the previous back up - need to get the state from S3
+See `.github/workflows/archive-new-posts.yml`.
 
 ## Testing the generated summary against the original posts
 
