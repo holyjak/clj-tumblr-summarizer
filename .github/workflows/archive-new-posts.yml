@@ -30,6 +30,10 @@ jobs:
         mkdir data
       env:
         TUMBLR_API_KEY: ${{ secrets.TUMBLR_API_KEY }}
+    - name: Get latest timestamp from S3 # FIXME Make it not fail if fixe not exists
+      run: aws s3 cp "s3://$BUCKET/max-timestamp"  ./data/max-timestamp
+      env:
+        BUCKET: ${{ secrets.BUCKET }}
     - name: Archive new posts # NOTE: Requires the secrets in the env
       run: clojure -M -m clj-tumblr-summarizer.main
       # FIXME !!! Fails with 'URISyntaxException: Illegal character in query at index 122: http://api.tumblr.com/v2/blog/holyjak.tumblr.com/posts?npf=true&api_key=***'
@@ -37,3 +41,4 @@ jobs:
       run: aws s3 sync ./data "s3://$BUCKET"
       env:
         BUCKET: ${{ secrets.BUCKET }}
+    
