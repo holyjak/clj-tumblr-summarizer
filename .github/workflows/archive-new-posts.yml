@@ -23,7 +23,6 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-1
-    # FIXME: Get info about the latest backed up post
     - name: Make api-key available to the app
       run: |
         echo -n "$TUMBLR_API_KEY" > .api-key
@@ -31,7 +30,7 @@ jobs:
       env:
         TUMBLR_API_KEY: ${{ secrets.TUMBLR_API_KEY }}
     - name: Get latest timestamp from S3 # FIXME Make it not fail if fixe not exists
-      run: aws s3 cp "s3://$BUCKET/max-timestamp"  ./data/max-timestamp
+      run: aws s3 cp "s3://$BUCKET/max-timestamp"  ./data/max-timestamp || echo "No max-timestamp stored in S3, will fetch all"
       env:
         BUCKET: ${{ secrets.BUCKET }}
     - name: Archive new posts # NOTE: Requires the secrets in the env
