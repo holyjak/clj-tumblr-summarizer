@@ -10,9 +10,9 @@
 (def max-timestamp-path (fs/path data-dir "max-timestamp"))
 
 (defn fname->ts [file-name]
-  (-> (re-find #"out(\d+)" file-name) second Integer/parseInt))
+  (some-> (re-find #"out(\d+)" file-name) second Integer/parseInt))
 
-(defn path->ts ^long [^Path file-path]
+(defn path->ts ^Long [^Path file-path]
   (-> (.getFileName file-path) str fname->ts))
 
 (defn posts-in-time-range 
@@ -23,7 +23,8 @@
   [[start-sec end-sec]]
   (->>
    (fs/list-dir data-dir
-     #(<= start-sec (path->ts %) (dec end-sec)))
+     #(when-let [ts (path->ts %)]
+        (<= start-sec ts (dec end-sec))))
    (sort-by path->ts)
    (map (comp edn/read-string slurp str))))
 
