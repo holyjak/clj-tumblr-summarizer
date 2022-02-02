@@ -112,11 +112,20 @@
   #_
   (when (not= title summary)
     (println "WARN: link: (not= title summary)" title "!=" summary))
-  [:span.link "👓 " [:a {:href (unredirect url)} (rm-gh summary)]
-   (when (seq tags)
-     (list " [" (str/join ", " tags) "]"))
-   (when description
-     (list " - " [:q description]))])
+  ;; Note: Remove default GitHub project description as it just duplicates the link:
+  ; link: ieugen/calcite-clj: Calcite Clojure wrapper / integration
+  ; descr.: Calcite Clojure wrapper / integration. Contribute to ieugen/calcite-clj development by creating an account on GitHub.
+  (let [[match project] (some->> description (re-find #"\. Contribute to ([^ ]+) development by creating an account on GitHub\."))
+        qt            str/re-quote-replacement
+        description' (cond-> description
+                       match (str/replace-first match ""))
+        duplicates-link? (some->> description' (re-matches (re-pattern (str "(GitHub - )?(" (some-> project qt) ": )?"
+                                                                         (some-> description' qt)))))]
+    [:span.link "👓 " [:a {:href (unredirect url)} (rm-gh summary)]
+     (when (seq tags)
+       (list " [" (str/join ", " tags) "]"))
+     (when (and description' (not duplicates-link?))
+       (list " - " [:q description']))]))
 
 (defn apply-text-subtype [formatted-text subtype]
   (case subtype
@@ -232,7 +241,7 @@
 
 (comment
 
-  (def post (->> posts (filter #(= 665732322540322816 (:id %))) first))
+  (def post (-> (slurp "data/out1641287885-672439085735051264.edn") clojure.edn/read-string))
   (doall (map #(render-block post %) (:content post)))
 
   (pr (render-post post))
@@ -247,6 +256,9 @@
     posts)
 
   )
+
+;; FIXME Simplify:
+;; > 👓 ieugen/calcite-clj: Calcite Clojure wrapper / integration [clojure, library, data] - Calcite Clojure wrapper / integration. Contribute to ieugen/calcite-clj development by creating an account on GitHub.
 
 
 #_(def sample (json/read-str
