@@ -1,6 +1,10 @@
 TODO
 ====
 
+## FIXME
+
+* https://holyjak.tumblr.com/post/692913172124925952/development-containers is not summarized correctly, the image included in the post does not show up
+
 ## Now
 
 1. Look into using GH Actions for the build and GH Pages for the search site
