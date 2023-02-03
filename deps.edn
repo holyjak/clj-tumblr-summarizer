@@ -9,5 +9,7 @@
         ;cognitect/dev-local {:local/root "lib-nonredistributable/dev-local-0.9.225.jar"} ; TODO Move to private S3, see https://kwill.dev/posts/testing-with-datomic-dev-local/
         hiccup/hiccup {:mvn/version "2.0.0-alpha2"} ; 1.0.5 lacks hiccup.util/raw-string
         org.clojure/data.json {:mvn/version "1.0.0"}
-        org.clojure/core.async {:mvn/version "1.3.610"}}}
+        org.clojure/core.async {:mvn/version "1.3.610"}
+
         ;; Experimental stuff:
+        scicloj/scicloj.ml {:mvn/version "0.1.4"}}}

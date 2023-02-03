@@ -40,8 +40,10 @@
 (defn summarize
   "Summarize posts for the previous month into `summary-<date>.html`"
   ([] (summarize nil))
-  ([_]
-    (let [ts-range (t/previous-month)
+  ([{:keys [date]}]
+    (let [ts-range (if date 
+                     (t/any-month date)
+                     (t/previous-month))
           md+yr (->> ts-range first t/epoch-ts->zdt
                      ((juxt t/zdt->month t/zdt->year))
                      (str/join "-"))

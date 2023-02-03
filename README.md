@@ -50,6 +50,8 @@ a local copy of this repo, inside its directory do:
 clojure -M -m clj-tumblr-summarizer.main
 # Create a summary of the previous month's posts:
 clojure -X:summarize 
+# Create a summary of the *given* month's posts:
+clojure -X:summarize :data '"2022-01"'
 ```
 
 ### Via Babashka tasks
@@ -60,7 +62,9 @@ If you have both Clojure CLI and [Babashka](https://babashka.org) and a local co
 # Download new posts
 bb run
 # Create a summary of the previous month's posts:
-bb summarize 
+bb summarize
+# Create a summary of the *given* month's posts:
+bb summarize-m 2022-12
 ```
 
 ### As a scheduled GitHub Action

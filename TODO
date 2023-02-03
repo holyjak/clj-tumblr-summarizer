@@ -1,6 +1,11 @@
 TODO
 ====
 
+## FIXME
+
+* https://holyjak.tumblr.com/post/692913172124925952/development-containers is not summarized correctly, the image included in the post does not show up
+* https://at.tumblr.com/holyjak/gifs-without-the-gif-the-most-performant-image/6rwi21o8khlk has broken sumary b/c it contaisn `<video>` in the text
+
 ## Now
 
 1. Look into using GH Actions for the build and GH Pages for the search site
