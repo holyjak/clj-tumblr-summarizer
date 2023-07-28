@@ -119,8 +119,9 @@
         qt            str/re-quote-replacement
         description' (cond-> description
                        match (str/replace-first match ""))
-        duplicates-link? (some->> description' (re-matches (re-pattern (str "(GitHub - )?(" (some-> project qt) ": )?"
-                                                                         (some-> description' qt)))))]
+        duplicates-link? (try (some->> description' (re-matches (re-pattern (str "(GitHub - )?(" (some-> project qt) ": )?"
+                                                                                 (some-> description' qt)))))
+                              (catch java.util.regex.PatternSyntaxException _))]
     [:span.link "👓 " [:a {:href (unredirect url)} (rm-gh summary)]
      (when (seq tags)
        (list " [" (str/join ", " tags) "]"))
