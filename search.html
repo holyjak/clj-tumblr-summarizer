@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search entries</title>
+    <link href="/pagefind/pagefind-ui.css" rel="stylesheet">
+    <script src="/pagefind/pagefind-ui.js"></script>
+    <body>
+        <h1>Search entries</h1>    
+<div id="search"></div>
+<script>
+    window.addEventListener('DOMContentLoaded', (event) => {
+        new PagefindUI({ 
+            element: "#search", 
+            showSubResults: true, 
+            excerptLength: 100,
+            showEmptyFilters: false,
+            baseUrl: "/",
+            processResult: function (result) {
+                result.url = result.url.substring(1); // drop the leading / that pagefind adds
+                return result;
+            }
+        });
+    });
+</script>
+    </body>
+</html>

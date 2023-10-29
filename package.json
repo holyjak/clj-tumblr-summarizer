@@ -1,0 +1,17 @@
+{
+  "name": "clj-tumblr-summarizer",
+  "version": "1.0.0",
+  "description": "A tool / library that progressively backs up posts from a Tumblr.com micro-blog and can produce monthly summaries of the published posts in HTML. Can be run as a scheduled GitHub Action.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "edn-data": "^1.0.0",
+    "pagefind": "^1.0.3",
+    "squint-cljs": "^0.3.35"
+  }
+}

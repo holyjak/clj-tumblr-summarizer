@@ -9,3 +9,5 @@ nongit/
 .nrepl-port
 .portal/
 .vscode/
+build-pagefind-index.mjs
+pagefind/
