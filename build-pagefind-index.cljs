@@ -14,21 +14,29 @@
 (defn entry->record [{:keys [tags summary content timestamp post_url date] :as _entry}]
   (try
    (let [date (when date (.substring date 0 10))
-         content (-> (.map content (fn [{:keys [text description]}] 
+         content-str (-> (.map content (fn [{:keys [text description]}]
                                     ;; type 'link' -> description, text -> text
-                                     (or text description)))
-                     (.join "\n"))]
+                                         (or text description)))
+                         (.join "\n"))
+         type-str (some-> content first :type)
+         typ (get {:text "📄"
+                   :link "👓"
+                   :video "🎥"} 
+                  type-str type-str)]
      {:url post_url
-      :content content
+      :content content-str
       :language "en"
      ;; optional:
       :meta (cond-> {:title summary
                      ;; These below will be displayed below the result
                      :date date #_image}
               (seq tags)
-              (assoc! :tags (-> tags (.sort) (.join ", "))))
+              (assoc! :tags (-> tags (.sort) (.join ", ")))
+              
+              typ
+              (assoc! :type typ))
       :filters {:tags tags}
-      :sort {:date date}})
+      :sort {:date (some-> timestamp str)}})
     (catch :default err
       (println "ERROR processing entry" _entry ":" (.-message err))
       (throw err))))
