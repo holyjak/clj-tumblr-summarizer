@@ -14,10 +14,13 @@
 (defn entry->record [{:keys [tags summary content timestamp post_url date] :as _entry}]
   (try
    (let [date (when date (.substring date 0 10))
+         tags-str (-> tags (.sort) (.join ", "))
          content-str (-> (.map content (fn [{:keys [text description]}]
                                     ;; type 'link' -> description, text -> text
                                          (or text description)))
-                         (.join "\n"))
+                         (.join "\n")
+                         ;; Make pagefind index also the tags themselves:
+                         (str "\n\nTags:" tags-str))
          type-str (some-> content first :type)
          typ (get {:text "📄"
                    :link "👓"
@@ -31,7 +34,7 @@
                      ;; These below will be displayed below the result
                      :date date #_image}
               (seq tags)
-              (assoc! :tags (-> tags (.sort) (.join ", ")))
+              (assoc! :tags tags-str)
               
               typ
               (assoc! :type typ))
