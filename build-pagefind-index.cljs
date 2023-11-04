@@ -1,7 +1,6 @@
-;; TODO: Add to the index incrementally, only new stuff => faster; currently takes 3 min
 (ns build-pagefind-index
   "Build a pagefind search index from .edn Tumblr entries previously downloaded
-   into /data, together with the supporting .js, .css and other files.
+   into /data, together with the supporting .js, .css and other files. ~ 5s for 1k entries.
    Serve statically ./search.html and ./pagefind/ to use the search."
   {:clj-kondo/ignore true}
   (:require
