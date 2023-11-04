@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "edn-data": "^1.0.0",
-    "pagefind": "^1.0.3",
+    "pagefind": "^1.0.4-beta.0",
     "squint-cljs": "^0.3.35"
   }
 }
