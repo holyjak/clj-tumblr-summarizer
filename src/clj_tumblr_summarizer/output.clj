@@ -44,7 +44,9 @@
     "link"
     [:a {:href (unredirect url)} target]
     "small"
-    [:span {:style "font-size: small"} target]))
+    [:span {:style "font-size: small"} target]
+    "strikethrough"
+    [:span {:style "text-decoration:line-through"} target]))
 
 (defn ->sparse-formatting-tree [text formatting]
   {:start 0
