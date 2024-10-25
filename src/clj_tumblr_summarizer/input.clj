@@ -11,7 +11,9 @@
     [org.httpkit.client :as http])
   (:import (java.io PushbackReader)))
 
-(def api-key (str/replace (slurp ".api-key") "\n" ""))
+(def ^:private api-key 
+  "API key = OAuth Consumer Key for endpoints that support it."
+  (str/replace (slurp ".api-key") "\n" ""))
 
 (defn fetch-post-batch-raw
   "Fetch 20 posts starting at the given offset, return the body (string) or throw
@@ -46,7 +48,37 @@
       :else
       body)))
 
-(defn parse-body [body]
+(defn fetch-post-single
+  "Ex.: `(fetch-post-single-raw \"holyjak\" 12345)`"
+  [blog-identifier post-id]
+  {:pre [blog-identifier post-id]}
+  (let [post-url (str ; before=int - Returns posts published earlier than a specified Unix timestamp, in seconds.
+                  "https://api.tumblr.com/v2/blog/" blog-identifier "/posts?npf=true"
+                  "&api_key=" api-key
+                  "&id=" post-id)
+        {:keys [status body error] :as _resp} @(http/get post-url)]
+    (cond
+
+      error
+      (throw
+       (ex-info
+        (.getMessage error)
+        {:ctx (str "Fetching posts failed from " post-url)}))
+
+      (>= status 300)
+      (throw
+       (ex-info
+        (str "Got non-2xx HTTP status " status ", body: " body)
+        {:posts-url post-url
+         :status status
+         :body body}))
+
+      :else
+      (-> body 
+          (json/read-str :key-fn keyword)
+          :response :posts first))))
+
+(defn- parse-batch-body [body]
   (let [{:keys [_links posts total_posts]}
         (:response (json/read-str body :key-fn keyword))]
     {:posts posts
@@ -62,7 +94,7 @@
   (a/go-loop []
     (if-let [href (:next-href (a/<! in))]
       (do (a/>! out (try
-                      (parse-body (fetch-post-batch-raw href))
+                      (parse-batch-body (fetch-post-batch-raw href))
                       (catch Exception e
                         (a/close! out)
                         (throw e))))

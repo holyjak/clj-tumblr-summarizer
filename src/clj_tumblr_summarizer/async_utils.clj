@@ -55,15 +55,17 @@
   "Write items into files, N-th value into ./data/out(id-fn value).edn. Blocking.
    If `timestamp-fn` is provide then it will also store the max timestamp."
   ([ch id-fn timestamp-fn]
-    (loop [ch ch, max-ts nil]
+    (loop [ch ch, max-ts nil, cnt 0]
       (if-let [v (<!! ch)]
         (do
           (println "spit-chan -> " (format "data/out%s.edn" (id-fn v)))
           (fs/write-post v (format "out%s.edn" (id-fn v)))
           (recur ch (when (and timestamp-fn (timestamp-fn v))
                       (cond-> (timestamp-fn v)
-                        max-ts (max max-ts)))))
-        (some-> max-ts fs/write-max-timestamp)))))
+                        max-ts (max max-ts)))
+                 (inc cnt)))
+        (do (some-> max-ts fs/write-max-timestamp)
+            {:written-cnt cnt, :new-max-ts max-ts})))))
 
 (defn tap-ch
   "(Troubleshooting) Make a channel that puts every value inserted into it onto `tap>` and also reports when closed."

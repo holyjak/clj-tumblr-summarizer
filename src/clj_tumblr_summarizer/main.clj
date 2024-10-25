@@ -19,6 +19,9 @@
       (binding [*out* *err*]
         (println "UNCAUGHT ERROR ON A THREAD:" (.getMessage throwable))))))
 
+(defn- post->file-name [{:keys [id timestamp] :as post}]
+  (str timestamp "-" id))
+
 (defn store-new-posts
   "Fetch all posts from the given Tumblr blog and dump them into files."
   [blog-name]
@@ -27,10 +30,17 @@
                                          previous-ts)))
         stop (chan)]
     (in/fetch-posts-async! blog-name posts-ch stop)
-    (au/spit-chan posts-ch (fn [{:keys [id timestamp]}]
-                             (str timestamp "-" id))
-      :timestamp)
+    (au/spit-chan posts-ch post->file-name  :timestamp)
     (a/close! stop)))
+
+(defn refetch-post! 
+  ([{:keys [blog-name id]}] (refetch-post! blog-name id))
+  ([blog-name id]
+  ;; NOTE: The updated post, in addition to :timestamp, also
+  ;; has `:updated 1690099491` (in sec)
+   (-> (in/fetch-post-single blog-name id) 
+       vector (a/to-chan!)
+       (au/spit-chan post->file-name nil))))
 
 (defn -main [& _]
   (let [blog-name (or (some-> (slurp "config.edn") edn/read-string :blog)

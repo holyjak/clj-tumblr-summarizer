@@ -1,6 +1,9 @@
 {:tasks {run:only {:doc "Download posts added after the previous run"
                    :override-builtin true
                    :task (clojure "-M" "-m" "clj-tumblr-summarizer.main")}
+         refetch {:doc "Refetch the given post (by id)"
+                  :task (clojure "-X" "clj-tumblr-summarizer.main/refetch-post!" 
+                                 ":blog-name" "\"holyjak\"" ":id" (first *command-line-args*))}
          summarize {:doc "Create an HTML summary of (already downloaded) posts from the previous month"
                     :task (clojure "-X:summarize")} ; also: clojure "-X:summarize" ":date" '"2022-12"'
          summarize-m {:doc "Create an HTML summary of (already downloaded) posts from AND month given as CLI arg like 2022-12"
